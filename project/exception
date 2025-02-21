@@ -1,12 +1,65 @@
-private boolean isValidLength(String field, int maxLength, String fieldName) {
-    if (field == null) {
-        log.error("{} is null", fieldName);
-        return false;
+package com.optum.ftps.ob.core.employer.details.validator;
+
+import com.optum.ftps.ob.core.employer.details.constants.ErrorCodeConstants;
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.model.v1.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import java.util.Collections;
+import java.util.Set;
+import static org.junit.jupiter.api.Assertions.*;
+
+class EmployerBankDetailsValidatorTest {
+
+    private EmployerBankDetailsValidator validator;
+
+    @BeforeEach
+    void setUp() {
+        validator = new EmployerBankDetailsValidator();
     }
-    String trimmedField = field.trim();
-    if (trimmedField.length() > maxLength) {
-        log.error("{} exceeds max length {}: {}", fieldName, maxLength, trimmedField);
-        return false;
+
+    @Test
+    void testValidateEmployerBankDetails_RequiredFieldsMissing() {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+        assertTrue(errors.contains(ErrorCodeConstants.REQUIRED_FIELDS_MISSING));
     }
-    return true;
+
+    @Test
+    void testValidateEmployerBankDetails_ValidRequest() {
+        UpdateEmpBankDetailsRequest request = createValidRequest();
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+        assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    void testValidateEmployerBankDetails_InvalidFormat() {
+        UpdateEmpBankDetailsRequest request = createValidRequest();
+        request.getEmployerBankDetail().getContributionBankAccounts().clear();
+        assertThrows(ValidationException.class, () -> validator.validateEmployerBankDetails(request));
+    }
+
+    private UpdateEmpBankDetailsRequest createValidRequest() {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("123456");
+        request.setRequestUserId("user123");
+        request.setSourceSystemId("SYS001");
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("EMP123");
+
+        ContributionBankAccount account = new ContributionBankAccount();
+        BankAccountIdentifier identifier = new BankAccountIdentifier();
+        identifier.setBankAccountNumber("1234567890");
+        identifier.setBankRoutingNumber("987654321");
+        account.setBankAccountIdentifier(identifier);
+        account.setBankName("Test Bank");
+        account.setBankAccountTypeCode(new CodeValue("SC"));
+        account.setBankAccountStatus(new CodeValue("AI"));
+        account.setBankAccountOperation("ADD");
+
+        employerBankDetail.setContributionBankAccounts(Collections.singletonList(account));
+        request.setEmployerBankDetail(employerBankDetail);
+        return request;
+    }
 }
