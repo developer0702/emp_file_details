@@ -1,3 +1,39 @@
+
+@Test
+void testValidateEmployerBankDetails_nullFields() throws ValidationException {
+    UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+    request.setEmployerBankDetail(null); // Simulating a null value
+
+    Set<Integer> errors = new HashSet<>();
+    assertDoesNotThrow(() -> errors.addAll(validator.validateEmployerBankDetails(request)),
+        "Validator should handle null fields gracefully without throwing NullPointerException.");
+
+    assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
+    assertTrue(errors.contains(2002), "Missing expected error code 2002 for null employer details.");
+}
+
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.time.LocalDateTime;
+
+public class MyModel {
+    
+    @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+    private LocalDateTime myDateTime;
+
+    // Getters and Setters
+    public LocalDateTime getMyDateTime() {
+        return myDateTime;
+    }
+
+    public void setMyDateTime(LocalDateTime myDateTime) {
+        this.myDateTime = myDateTime;
+    }
+}
+
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
 package com.optum.ftps.ob.core.employer.details.validator;
 
 import static org.junit.jupiter.api.Assertions.*;
