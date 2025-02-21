@@ -1,81 +1,32 @@
-package com.optum.ftps.ob.core.employer.details.validator;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+java.lang.NullPointerException: Cannot invoke "com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail.getEmployerGroupId()" because the return value of "com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest.getEmployerBankDetail()" is null
 
-import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
-import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountIdentifier;
-import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountStatus;
-import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountTypeCode;
-import com.optum.ftps.ob.core.employer.details.model.v1.ContributionBankAccount;
-import com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail;
-import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest;
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.sanitizeRequest(EmployerBankDetailsValidator.java:274)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.validateEmployerBankDetails(EmployerBankDetailsValidator.java:30)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidatorTest.testValidateEmployerBankDetails_nullFields(EmployerBankDetailsValidatorTest.java:56)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-import java.util.Set;
+java.lang.NullPointerException: Cannot invoke "com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail.getEmployerGroupId()" because the return value of "com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest.getEmployerBankDetail()" is null
 
-public class EmployerBankDetailsValidatorTest {
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.sanitizeRequest(EmployerBankDetailsValidator.java:274)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.validateEmployerBankDetails(EmployerBankDetailsValidator.java:30)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidatorTest.testValidateEmployerBankDetails_emptyRequest(EmployerBankDetailsValidatorTest.java:44)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-    private final EmployerBankDetailsValidator validator = new EmployerBankDetailsValidator();
+03:05:32.667 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of SourceSystemId should be less than or equal to 10**** invalidSource
+03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of EmployerGroupId should be less than or equal to 9**** invalidGroup
+03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of BankRoutingNumber should be equal to 9***** invalidRouting
+03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of BankAccountNumber should be less than or equal to 17 ******* invalidAccount
+03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- BankAccountTypeCode should only be of 1 char Length[S (Savings) or C (Checking)] X
+03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- BankAccountStsCode should only be of 1 char Length[A (Active) or I (Inactive)] X
 
-    @Test
-    void testValidateEmployerBankDetails_validRequest() throws ValidationException {
-        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
-        request.setRequestId("-4123525199855273062");
-        request.setRequestUserId("prajula1");
-        request.setSourceSystemId("4");
-
-        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
-        employerBankDetail.setEmployerGroupId("TST_EMP1001");
-
-        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
-        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
-        bankAccountIdentifier.setBankAccountNumber("32325435435465456");
-        bankAccountIdentifier.setBankRoutingNumber("041215032");
-        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
-        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("C", "Checking"));
-        contributionBankAccount.setBankName("PUNJAB NATIONAL BANK");
-        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("A", "Active"));
-        contributionBankAccount.setBankSequenceNumber("14");
-        contributionBankAccount.setBankAccountNickName("HUNTINGTON NATIONAL BANK 5456");
-        contributionBankAccount.setBankAccountOperation("Update");
-
-        employerBankDetail.setContributionBankAccounts(
-                Collections.singletonList(contributionBankAccount));
-        request.setEmployerBankDetail(employerBankDetail);
-
-        Set<Integer> errors = validator.validateEmployerBankDetails(request);
-
-        assertTrue(errors.isEmpty());
-    }
-
-    @Test
-    void testValidateEmployerBankDetails_invalidRequest() throws ValidationException {
-        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
-        request.setRequestId("invalidRequestIdThatIsWayTooLongForTheSystemToHandleProperly");
-        request.setRequestUserId("invalidUserIdThatIsWayTooLongForTheSystemToHandleProperly");
-        request.setSourceSystemId("invalidSourceId");
-
-        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
-        employerBankDetail.setEmployerGroupId("invalidGroupIdThatIsWayTooLong");
-
-        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
-        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
-        bankAccountIdentifier.setBankAccountNumber("invalidAccountNumberThatIsWayTooLong");
-        bankAccountIdentifier.setBankRoutingNumber("invalidRoutingNumber");
-        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
-        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("X", "InvalidType"));
-        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("X", "InvalidStatus"));
-        contributionBankAccount.setBankAccountOperation("INVALID");
-
-        employerBankDetail.setContributionBankAccounts(
-                Collections.singletonList(contributionBankAccount));
-        request.setEmployerBankDetail(employerBankDetail);
-
-        Set<Integer> errors = validator.validateEmployerBankDetails(request);
-
-        assertFalse(errors.isEmpty());
-    }
-}
+Invalid operation code
+ValidationException(errorCodes=null)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.checkBankAccountOperationFormat(EmployerBankDetailsValidator.java:253)
+	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.checkContributionAccountsFormat(EmployerBankDetailsValidator.java:147)
+	
