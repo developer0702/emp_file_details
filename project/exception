@@ -3,6 +3,7 @@ package com.optum.ftps.ob.core.employer.details.validator;
 import com.optum.ftps.ob.core.employer.details.constants.ErrorCodeConstants;
 import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
 import com.optum.ftps.ob.core.employer.details.model.v1.*;
+import org.aspectj.apache.bcel.classfile.Code;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Collections;
@@ -19,14 +20,14 @@ class EmployerBankDetailsValidatorTest {
     }
 
     @Test
-    void testValidateEmployerBankDetails_RequiredFieldsMissing() {
+    void testValidateEmployerBankDetails_RequiredFieldsMissing() throws ValidationException {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
         Set<Integer> errors = validator.validateEmployerBankDetails(request);
         assertTrue(errors.contains(ErrorCodeConstants.REQUIRED_FIELDS_MISSING));
     }
 
     @Test
-    void testValidateEmployerBankDetails_ValidRequest() {
+    void testValidateEmployerBankDetails_ValidRequest() throws ValidationException {
         UpdateEmpBankDetailsRequest request = createValidRequest();
         Set<Integer> errors = validator.validateEmployerBankDetails(request);
         assertTrue(errors.isEmpty());
@@ -54,8 +55,16 @@ class EmployerBankDetailsValidatorTest {
         identifier.setBankRoutingNumber("987654321");
         account.setBankAccountIdentifier(identifier);
         account.setBankName("Test Bank");
-        account.setBankAccountTypeCode(new CodeValue("SC"));
-        account.setBankAccountStatus(new CodeValue("AI"));
+
+        BankAccountTypeCode bankAccountTypeCode = new BankAccountTypeCode();
+        bankAccountTypeCode.setCode("S");
+        bankAccountTypeCode.setCodeName("Savings");
+
+        account.setBankAccountTypeCode(bankAccountTypeCode);
+        BankAccountStatus bankAccountStatus = new BankAccountStatus();
+        bankAccountStatus.setCodeName("ACTIVE");
+        bankAccountStatus.setCode("A");
+        account.setBankAccountStatus(bankAccountStatus);
         account.setBankAccountOperation("ADD");
 
         employerBankDetail.setContributionBankAccounts(Collections.singletonList(account));
