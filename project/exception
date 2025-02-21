@@ -1,26 +1,81 @@
-// Assertions
-        assertNotNull(response, "Response should not be null");
-        assertNotNull(response.getEmployerBankDetail(), "EmployerBankDetail should not be null");
-        assertNotNull(response.getEmployerBankDetail().getContributionBankAccounts(), "ContributionBankAccounts should not be null");
-        assertEquals("Test Bank", response.getEmployerBankDetail().getContributionBankAccounts().getFirst().getBankName());
+package com.optum.ftps.ob.core.employer.details.validator;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountIdentifier;
+import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountStatus;
+import com.optum.ftps.ob.core.employer.details.model.v1.BankAccountTypeCode;
+import com.optum.ftps.ob.core.employer.details.model.v1.ContributionBankAccount;
+import com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest;
 
+import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.Set;
 
+public class EmployerBankDetailsValidatorTest {
 
+    private final EmployerBankDetailsValidator validator = new EmployerBankDetailsValidator();
 
-OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+    @Test
+    void testValidateEmployerBankDetails_validRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("-4123525199855273062");
+        request.setRequestUserId("prajula1");
+        request.setSourceSystemId("4");
 
-org.opentest4j.AssertionFailedError: expected: not <null>
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("TST_EMP1001");
 
-	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:152)
-	at org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
-	at org.junit.jupiter.api.AssertNotNull.failNull(AssertNotNull.java:49)
-	at org.junit.jupiter.api.AssertNotNull.assertNotNull(AssertNotNull.java:35)
-	at org.junit.jupiter.api.AssertNotNull.assertNotNull(AssertNotNull.java:30)
-	at org.junit.jupiter.api.Assertions.assertNotNull(Assertions.java:304)
-	at com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsServiceImplTest.updateEmployerBankDetails_successfulResponse_returnsUpdatedResponse(EmployerBankDetailsServiceImplTest.java:98)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber("32325435435465456");
+        bankAccountIdentifier.setBankRoutingNumber("041215032");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("C", "Checking"));
+        contributionBankAccount.setBankName("PUNJAB NATIONAL BANK");
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("A", "Active"));
+        contributionBankAccount.setBankSequenceNumber("14");
+        contributionBankAccount.setBankAccountNickName("HUNTINGTON NATIONAL BANK 5456");
+        contributionBankAccount.setBankAccountOperation("Update");
+
+        employerBankDetail.setContributionBankAccounts(
+                Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    void testValidateEmployerBankDetails_invalidRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("invalidRequestIdThatIsWayTooLongForTheSystemToHandleProperly");
+        request.setRequestUserId("invalidUserIdThatIsWayTooLongForTheSystemToHandleProperly");
+        request.setSourceSystemId("invalidSourceId");
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("invalidGroupIdThatIsWayTooLong");
+
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber("invalidAccountNumberThatIsWayTooLong");
+        bankAccountIdentifier.setBankRoutingNumber("invalidRoutingNumber");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("X", "InvalidType"));
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("X", "InvalidStatus"));
+        contributionBankAccount.setBankAccountOperation("INVALID");
+
+        employerBankDetail.setContributionBankAccounts(
+                Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty());
+    }
+}
