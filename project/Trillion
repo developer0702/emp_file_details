@@ -1,63 +1,7 @@
+package com.optum.ftps.ob.core.employer.details.controller;
 
-if (responseDTO == null) {
-            log.error("Service call failed, received null response");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(buildErrorResponse("500", "Service response is null"));
-        }
-
-
-****************************************
-public ResponseEntity<UpdateEmpBankDetailsResponse> updEmployerBankDetails(
-        @Valid @RequestBody UpdateEmpBankDetailsRequest request) throws ValidationException {
-    
-    log.debug("Received request to update employer bank details: {}", request);
-
-    // Validate request
-    Set<Integer> errors = employerBankDetailsValidator.validateEmployerBankDetails(request);
-    if (!errors.isEmpty()) {
-        log.error("Validation failed for update employer bank details request: {}", errors);
-        Status status = new Status("400", "ERROR", "Validation failed: " + errors);
-        UpdateEmpBankDetailsResponse errorResponse = UpdateEmpBankDetailsResponse.builder()
-                .status(status)
-                .build();
-        return ResponseEntity.badRequest().body(errorResponse);
-    }
-
-    try {
-        // Mapping request
-        var requestDTO = employerBankDetailsMapper.map(request);
-
-        // Calling service
-        var responseDTO = employerBankDetailsService.updateEmployerBankDetails(requestDTO);
-
-        // Mapping response
-        var response = employerBankDetailsResponseMapper.map(responseDTO);
-
-        log.debug("Employer bank details updated successfully: {}", responseDTO);
-        return ResponseEntity.ok(response);
-
-    } catch (ValidationException e) {
-        log.error("Validation error occurred: {}", e.getMessage(), e);
-        Status status = new Status("400", "ERROR", "Validation error: " + e.getMessage());
-        return ResponseEntity.badRequest()
-                .body(UpdateEmpBankDetailsResponse.builder().status(status).build());
-    } catch (EntityNotFoundException e) {
-        log.error("Employer not found: {}", e.getMessage(), e);
-        Status status = new Status("404", "ERROR", "Employer Not Found");
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(UpdateEmpBankDetailsResponse.builder().status(status).build());
-    } catch (Exception e) {
-        log.error("Unexpected error occurred while updating employer bank details: {}", e.getMessage(), e);
-        Status status = new Status("500", "ERROR", "Internal Server Error");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(UpdateEmpBankDetailsResponse.builder().status(status).build());
-    }
-}
-
-
-
-******************************************************************************************
-
+import com.optum.ftps.ob.core.employer.details.dtos.EmployerBankDetailsRequestDTO;
+import com.optum.ftps.ob.core.employer.details.dtos.EmployerBankDetailsResponseDTO;
 import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
 import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsMapper;
 import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsResponseMapper;
@@ -70,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -82,12 +27,20 @@ import static org.mockito.Mockito.when;
 
 public class EmployerBankDetailsControllerTest {
 
-    @Mock private EmployerBankDetailsService employerBankDetailsService;
-    @Mock private EmployerBankDetailsValidator employerBankDetailsValidator;
-    @Mock private EmployerBankDetailsMapper employerBankDetailsMapper;
-    @Mock private EmployerBankDetailsResponseMapper employerBankDetailsResponseMapper;
+    @Mock
+    private EmployerBankDetailsService employerBankDetailsService;
 
-    @InjectMocks private EmployerBankDetailsController employerBankDetailsController;
+    @Mock
+    private EmployerBankDetailsValidator employerBankDetailsValidator;
+
+    @Mock
+    private EmployerBankDetailsMapper employerBankDetailsMapper;
+
+    @Mock
+    private EmployerBankDetailsResponseMapper employerBankDetailsResponseMapper;
+
+    @InjectMocks
+    private EmployerBankDetailsController employerBankDetailsController;
 
     @BeforeEach
     void setUp() {
@@ -97,17 +50,16 @@ public class EmployerBankDetailsControllerTest {
     @Test
     void updEmployerBankDetails_validRequest_returnsOk() throws ValidationException {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        EmployerBankDetailsRequestDTO requestDTO = new EmployerBankDetailsRequestDTO();
+        EmployerBankDetailsResponseDTO responseDTO = new EmployerBankDetailsResponseDTO();
         UpdateEmpBankDetailsResponse response = new UpdateEmpBankDetailsResponse();
-        response.setStatus(new Status("200", "Success"));
 
-        when(employerBankDetailsValidator.validateEmployerBankDetails(request))
-                .thenReturn(Collections.emptySet());
-        when(employerBankDetailsMapper.map(request)).thenReturn(null);
-        when(employerBankDetailsService.updateEmployerBankDetails(null)).thenReturn(null);
-        when(employerBankDetailsResponseMapper.map(null)).thenReturn(response);
+        when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(Collections.emptySet());
+        when(employerBankDetailsMapper.map(Mockito.any(UpdateEmpBankDetailsRequest.class))).thenReturn(requestDTO);
+        when(employerBankDetailsService.updateEmployerBankDetails(Mockito.any())).thenReturn(responseDTO);
+        when(employerBankDetailsResponseMapper.map(responseDTO)).thenReturn(response);
 
-        ResponseEntity<UpdateEmpBankDetailsResponse> result =
-                employerBankDetailsController.updEmployerBankDetails(request);
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
         assertEquals(response, result.getBody());
@@ -117,29 +69,39 @@ public class EmployerBankDetailsControllerTest {
     void updEmployerBankDetails_invalidRequest_returnsBadRequest() throws ValidationException {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
         Set<Integer> errors = Set.of(1);
+        Status status = new Status();
+        status.setStatusCode("400");
+        status.setSeverity("ERROR");
+        status.setStatusDescription("Validation failed: " + errors);
+        UpdateEmpBankDetailsResponse expectedResponse = new UpdateEmpBankDetailsResponse();
+        expectedResponse.setStatus(status);
+
         when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(errors);
 
-        ResponseEntity<UpdateEmpBankDetailsResponse> result =
-                employerBankDetailsController.updEmployerBankDetails(request);
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
 
         assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertEquals("400", result.getBody().getStatus().getStatusCode());
+        assertEquals(expectedResponse.getStatus().getStatusCode(), result.getBody().getStatus().getStatusCode());
     }
 
     @Test
-    void updEmployerBankDetails_serviceThrowsException_returnsInternalServerError()
-            throws ValidationException {
+    void updEmployerBankDetails_serviceThrowsException_returnsInternalServerError() throws ValidationException {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
-        when(employerBankDetailsValidator.validateEmployerBankDetails(request))
-                .thenReturn(Collections.emptySet());
-        when(employerBankDetailsMapper.map(request)).thenReturn(null);
-        when(employerBankDetailsService.updateEmployerBankDetails(null))
-                .thenThrow(new RuntimeException());
+        EmployerBankDetailsRequestDTO requestDTO = new EmployerBankDetailsRequestDTO();
+        Status status = new Status();
+        status.setStatusCode("500");
+        status.setSeverity("ERROR");
+        status.setStatusDescription("Unexpected server error");
+        UpdateEmpBankDetailsResponse expectedResponse = new UpdateEmpBankDetailsResponse();
+        expectedResponse.setStatus(status);
 
-        ResponseEntity<UpdateEmpBankDetailsResponse> result =
-                employerBankDetailsController.updEmployerBankDetails(request);
+        when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(Collections.emptySet());
+        when(employerBankDetailsMapper.map(request)).thenReturn(requestDTO);
+        when(employerBankDetailsService.updateEmployerBankDetails(requestDTO)).thenThrow(new RuntimeException());
+
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
-        assertEquals("500", result.getBody().getStatus().getStatusCode());
+        assertEquals(expectedResponse.getStatus().getStatusCode(), result.getBody().getStatus().getStatusCode());
     }
 }
