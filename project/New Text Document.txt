@@ -1,0 +1,14 @@
+package com.optum.ftps.ob.core.employer.details.service;
+
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+
+public interface EmployerBankDetailsService {
+
+    EmployerBankDetailsResponseDTO updateEmployerBankDetails(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO)throws ValidationException ;
+}
+
+
+=========yaml-===========================
+
