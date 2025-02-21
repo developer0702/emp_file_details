@@ -1,3 +1,26 @@
+private boolean validateAccounts(List<ContributionBankAccount> accounts) {
+    try {
+        return accounts.stream().allMatch(account -> {
+            try {
+                return validateAccount(account);
+            } catch (ValidationException e) {
+                log.error("Validation failed for account: {}", account, e);
+                return false; // Or handle differently
+            }
+        });
+    } catch (Exception e) {
+        log.error("Unexpected error in account validation", e);
+        return false;
+    }
+}
+
+
+
+
+
+****************************
+
+
 package com.optum.ftps.ob.core.employer.details.validator;
 
 import com.optum.ftps.ob.core.employer.details.constants.EmployerDetailsConstants;
