@@ -1,0 +1,270 @@
+package com.optum.ftps.ob.core.employer.details.controller;
+
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsMapper;
+import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsResponseMapper;
+import com.optum.ftps.ob.core.employer.details.model.v1.Status;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsResponse;
+import com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsService;
+import com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Collections;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
+public class EmployerBankDetailsControllerTest {
+
+    @Mock
+    private EmployerBankDetailsService employerBankDetailsService;
+
+    @Mock
+    private EmployerBankDetailsValidator employerBankDetailsValidator;
+
+    @Mock
+    private EmployerBankDetailsMapper employerBankDetailsMapper;
+
+    @Mock
+    private EmployerBankDetailsResponseMapper employerBankDetailsResponseMapper;
+
+    @InjectMocks
+    private EmployerBankDetailsController employerBankDetailsController;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void updEmployerBankDetails_validRequest_returnsOk() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        UpdateEmpBankDetailsResponse response = new UpdateEmpBankDetailsResponse();
+        when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(Collections.emptySet());
+        when(employerBankDetailsMapper.map(request)).thenReturn(null);
+        when(employerBankDetailsService.updateEmployerBankDetails(null)).thenReturn(null);
+        when(employerBankDetailsResponseMapper.map(null)).thenReturn(response);
+
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
+
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertEquals(response, result.getBody());
+    }
+
+    @Test
+    void updEmployerBankDetails_invalidRequest_returnsBadRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        Set<Integer> errors = Set.of(1);
+        when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(errors);
+
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
+        assertEquals("400", result.getBody().getStatus().getStatusCode());
+    }
+
+    @Test
+    void updEmployerBankDetails_serviceThrowsException_returnsInternalServerError() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        when(employerBankDetailsValidator.validateEmployerBankDetails(request)).thenReturn(Collections.emptySet());
+        when(employerBankDetailsMapper.map(request)).thenReturn(null);
+        when(employerBankDetailsService.updateEmployerBankDetails(null)).thenThrow(new RuntimeException());
+
+        ResponseEntity<UpdateEmpBankDetailsResponse> result = employerBankDetailsController.updEmployerBankDetails(request);
+
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertEquals("200", result.getBody().getStatus().getStatusCode());
+    }
+}
+
+===========================================
+
+package com.optum.ftps.ob.core.employer.details.dto;
+
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class EmployerBankDetailsResponseDTOTest {
+
+    @Test
+    void testGettersAndSetters() {
+        EmployerBankDetailsResponseDTO dto = new EmployerBankDetailsResponseDTO();
+        EmployerBankDetailDTO detailDTO = new EmployerBankDetailDTO();
+        dto.setEmployerBankDetail(detailDTO);
+
+        assertEquals(detailDTO, dto.getEmployerBankDetail());
+    }
+}
+
+=============================
+
+package com.optum.ftps.ob.core.employer.details.mapper;
+
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsResponse;
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailDTO;
+import com.optum.ftps.ob.core.employer.details.dto.ContributionBankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountIdentifierDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountStatusDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountTypeCodeDTO;
+import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
+
+import java.util.Collections;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+public class EmployerBankDetailsResponseMapperTest {
+
+    private final EmployerBankDetailsResponseMapper mapper = Mappers.getMapper(EmployerBankDetailsResponseMapper.class);
+
+    @Test
+    void testMap() {
+        EmployerBankDetailsResponseDTO responseDTO = new EmployerBankDetailsResponseDTO();
+        EmployerBankDetailDTO employerBankDetailDTO = new EmployerBankDetailDTO();
+        employerBankDetailDTO.setEmployerGroupId("validGroupId");
+
+        ContributionBankAccountDTO contributionBankAccountDTO = new ContributionBankAccountDTO();
+        BankAccountIdentifierDTO bankAccountIdentifierDTO = new BankAccountIdentifierDTO();
+        bankAccountIdentifierDTO.setBankAccountNumber("12345678901234567");
+        bankAccountIdentifierDTO.setBankRoutingNumber("123456789");
+        contributionBankAccountDTO.setBankAccountIdentifier(bankAccountIdentifierDTO);
+        contributionBankAccountDTO.setBankAccountTypeCode(new BankAccountTypeCodeDTO("S", "Savings"));
+        contributionBankAccountDTO.setBankAccountStatus(new BankAccountStatusDTO("A", "Active"));
+        contributionBankAccountDTO.setBankAccountOperation("ADD");
+
+        employerBankDetailDTO.setContributionBankAccounts(Collections.singletonList(contributionBankAccountDTO));
+        responseDTO.setEmployerBankDetail(employerBankDetailDTO);
+
+        UpdateEmpBankDetailsResponse response = mapper.map(responseDTO);
+
+        assertNotNull(response);
+    }
+}
+
+
+=================================
+
+package com.optum.ftps.ob.core.employer.details.util;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class StringUtilTest {
+
+    @Test
+    void testLoggableString() {
+        assertEquals("test", StringUtil.loggableString(" test "));
+        assertEquals("", StringUtil.loggableString(""));
+        assertEquals("", StringUtil.loggableString(null));
+    }
+
+    @Test
+    void testIsEmpty() {
+        assertTrue(StringUtil.isEmpty(""));
+        assertTrue(StringUtil.isEmpty(null));
+        assertFalse(StringUtil.isEmpty("test"));
+    }
+
+    @Test
+    void testSanitize() {
+        assertEquals("test", StringUtil.sanitize(" test \n\r"));
+        assertNull(StringUtil.sanitize(null));
+    }
+
+    @Test
+    void testIsAlphanumericAndSpecial() {
+        assertTrue(StringUtil.isAlphanumericAndSpecial("test@123"));
+        assertFalse(StringUtil.isAlphanumericAndSpecial("test123"));
+        assertFalse(StringUtil.isAlphanumericAndSpecial(""));
+    }
+
+    @Test
+    void testGetTrimmedString() {
+        assertEquals("test", StringUtil.getTrimmedString(" test "));
+        assertNull(StringUtil.getTrimmedString(null));
+    }
+
+    @Test
+    void testGetTrimmedStringUpperCase() {
+        assertEquals("TEST", StringUtil.getTrimmedStringUpperCase(" test "));
+        assertNull(StringUtil.getTrimmedStringUpperCase(null));
+    }
+
+    @Test
+    void testRemove() {
+        assertEquals("tst", StringUtil.remove("test", "e"));
+    }
+
+    @Test
+    void testHasWhitespace() {
+        assertTrue(StringUtil.hasWhitespace("test string"));
+        assertFalse(StringUtil.hasWhitespace("teststring"));
+    }
+//    @Test
+//    void testIsNumeric() {
+//        assertTrue(StringUtil.isNumeric("12345"));
+//        assertFalse(StringUtil.isNumeric("123a45"));
+//        assertFalse(StringUtil.isNumeric(null));
+//        assertFalse(StringUtil.isNumeric(""));
+//    }
+
+    @Test
+    void testCheckLength() {
+        assertTrue(StringUtil.checkLength("test", 2, 5));
+        assertFalse(StringUtil.checkLength("test", 5, 10));
+    }
+
+    @Test
+    void testReplace() {
+        assertEquals("tst", StringUtil.replace("test", "e", ""));
+        assertEquals("tst", StringUtil.replace("test", new String[]{"e"}, new String[]{""}));
+    }
+
+    @Test
+    void testContains() {
+        assertTrue(StringUtil.contains("test", "es"));
+        assertFalse(StringUtil.contains("test", "xyz"));
+    }
+
+    @Test
+    void testTrimSpaces() {
+        assertEquals("test", StringUtil.trimSpaces(" test "));
+        assertEquals("", StringUtil.trimSpaces(""));
+    }
+
+    @Test
+    void testFormatDecimal() {
+        assertEquals("12345.67", StringUtil.formatDecimal(12345.67));
+    }
+
+    @Test
+    void testIsDecimal() {
+        assertTrue(StringUtil.isDecimal("12345.67"));
+        assertFalse(StringUtil.isDecimal("12345.678"));
+        assertFalse(StringUtil.isDecimal("12345a.67"));
+    }
+
+    @Test
+    void testSplitBySpecialChars() {
+        assertEquals("TEST", StringUtil.splitBySpecialChars("test@123"));
+        assertEquals("TEST", StringUtil.splitBySpecialChars("test"));
+    }
+
+    @Test
+    void testGetStringWithMaxLength() {
+        assertEquals("test", StringUtil.getStringWithMaxLength("test", 10));
+        assertEquals("te", StringUtil.getStringWithMaxLength("test", 2));
+    }
+}
