@@ -1,32 +1,42 @@
+public Set<Integer> validateEmployerBankDetails(UpdateEmpBankDetailsRequest request) {
+    Set<Integer> errors = new HashSet<>();
 
-java.lang.NullPointerException: Cannot invoke "com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail.getEmployerGroupId()" because the return value of "com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest.getEmployerBankDetail()" is null
+    if (request == null) {
+        errors.add(2000); // Error code for null request
+        return errors;
+    }
 
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.sanitizeRequest(EmployerBankDetailsValidator.java:274)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.validateEmployerBankDetails(EmployerBankDetailsValidator.java:30)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidatorTest.testValidateEmployerBankDetails_nullFields(EmployerBankDetailsValidatorTest.java:56)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+    if (request.getEmployerBankDetail() == null) {
+        errors.add(2002); // Error code for missing employer details
+        return errors;
+    }
+
+    // Ensure employerBankDetail is non-null before calling sanitizeRequest()
+    sanitizeRequest(request.getEmployerBankDetail());
+
+    return errors;
+}
+
+private void sanitizeRequest(EmployerBankDetail employerBankDetail) {
+    if (employerBankDetail == null) {
+        return; // Avoid NPE
+    }@Test
+void testValidateEmployerBankDetails_nullFields() throws ValidationException {
+    UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+    request.setEmployerBankDetail(null); // Simulating a null EmployerBankDetail
+
+    Set<Integer> errors = assertDoesNotThrow(() -> validator.validateEmployerBankDetails(request),
+        "Validator should handle null fields gracefully without throwing NullPointerException.");
+
+    assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
+    assertTrue(errors.contains(2002), "Expected error code 2002 for missing employer details.");
+}
 
 
-java.lang.NullPointerException: Cannot invoke "com.optum.ftps.ob.core.employer.details.model.v1.EmployerBankDetail.getEmployerGroupId()" because the return value of "com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest.getEmployerBankDetail()" is null
+    if (employerBankDetail.getEmployerGroupId() == null) {
+        employerBankDetail.setEmployerGroupId(""); // Default empty value
+    }
 
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.sanitizeRequest(EmployerBankDetailsValidator.java:274)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.validateEmployerBankDetails(EmployerBankDetailsValidator.java:30)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidatorTest.testValidateEmployerBankDetails_emptyRequest(EmployerBankDetailsValidatorTest.java:44)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+    // Add further checks for other fields...
+}
 
-03:05:32.667 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of SourceSystemId should be less than or equal to 10**** invalidSource
-03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of EmployerGroupId should be less than or equal to 9**** invalidGroup
-03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of BankRoutingNumber should be equal to 9***** invalidRouting
-03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- Length of BankAccountNumber should be less than or equal to 17 ******* invalidAccount
-03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- BankAccountTypeCode should only be of 1 char Length[S (Savings) or C (Checking)] X
-03:05:32.670 [main] ERROR com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator -- BankAccountStsCode should only be of 1 char Length[A (Active) or I (Inactive)] X
-
-Invalid operation code
-ValidationException(errorCodes=null)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.checkBankAccountOperationFormat(EmployerBankDetailsValidator.java:253)
-	at com.optum.ftps.ob.core.employer.details.validator.EmployerBankDetailsValidator.checkContributionAccountsFormat(EmployerBankDetailsValidator.java:147)
-	
