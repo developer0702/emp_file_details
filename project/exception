@@ -1,15 +1,15 @@
- @Test
-    void testValidateEmployerBankDetails_nullFields() {
-        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
-        request.setRequestId(null); // ✅ Null requestId
-        request.setRequestUserId(null); // ✅ Null requestUserId
-        request.setSourceSystemId(null); // ✅ Null sourceSystemId
-        request.setEmployerBankDetail(null); // ✅ Null employer details (causes NPE in some cases)
+@Test
+void testValidateEmployerBankDetails_nullFields() throws ValidationException {
+    UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+    request.setRequestId(null); // ✅ Null requestId
+    request.setRequestUserId(null); // ✅ Null requestUserId
+    request.setSourceSystemId(null); // ✅ Null sourceSystemId
+    request.setEmployerBankDetail(null); // ✅ Null employer details
 
-        try {
-            Set<Integer> errors = validator.validateEmployerBankDetails(request);
-            assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
-        } catch (NullPointerException e) {
-            fail("Test failed due to NullPointerException. Ensure validator handles null fields.");
-        }
-    }
+    Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+    // ✅ Ensure that errors are returned instead of throwing a NullPointerException
+    assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
+    assertTrue(errors.contains(2001), "Expected error code 2001 for missing requestId.");
+    assertTrue(errors.contains(2002), "Expected error code 2002 for missing employer details.");
+}
