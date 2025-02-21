@@ -1,0 +1,120 @@
+package com.optum.ftps.ob.core.employer.details.service;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.optum.ftps.ob.core.employer.details.dto.*;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.*;
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
+import com.optum.ftps.ob.core.employer.details.service.impl.EmployerBankDetailsServiceImpl;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import reactor.core.publisher.Mono;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+
+public class EmployerBankDetailsServiceImplTest {
+
+    @Mock private BankAccountClient bankAccountClient;
+
+    @InjectMocks private EmployerBankDetailsServiceImpl employerBankDetailsService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void updateEmployerBankDetails_validRequest_returnsResponse() throws ValidationException {
+        EmployerBankDetailsResponseDTO requestDTO = createValidRequestDTO();
+
+        // Mocking response with dummy data
+        BankAccountResponse bankAccountResponse = createDummyBankAccountResponse();
+
+        when(bankAccountClient.callGetBankAccountInfoApi("validGroupId", 1L))
+                .thenReturn(Mono.just(bankAccountResponse));
+        when(bankAccountClient.updateBankAccountResponse(any(), eq("validGroupId"), eq(1L)))
+                .thenReturn(new BankAccountResponseDTO());
+
+        EmployerBankDetailsResponseDTO responseDTO =
+                employerBankDetailsService.updateEmployerBankDetails(requestDTO);
+
+        assertNotNull(responseDTO);
+        assertEquals("validGroupId", responseDTO.getEmployerBankDetail().getEmployerGroupId());
+        assertEquals(1, responseDTO.getEmployerBankDetail().getContributionBankAccounts().size());
+    }
+
+    @Test
+    void updateEmployerBankDetails_invalidRequest_throwsValidationException() {
+        EmployerBankDetailsResponseDTO requestDTO = new EmployerBankDetailsResponseDTO();
+        requestDTO.setEmployerBankDetail(new EmployerBankDetailDTO());
+
+        assertThrows(
+                ValidationException.class,
+                () -> employerBankDetailsService.updateEmployerBankDetails(requestDTO));
+    }
+
+    @Test
+    void updateEmployerBankDetails_serviceThrowsException_returnsNull() throws ValidationException {
+        EmployerBankDetailsResponseDTO requestDTO = createValidRequestDTO();
+
+        when(bankAccountClient.callGetBankAccountInfoApi("validGroupId", 1L))
+                .thenThrow(new RuntimeException("Service error"));
+
+        EmployerBankDetailsResponseDTO responseDTO =
+                employerBankDetailsService.updateEmployerBankDetails(requestDTO);
+
+        assertNull(responseDTO);
+    }
+
+    private EmployerBankDetailsResponseDTO createValidRequestDTO() {
+        EmployerBankDetailsResponseDTO requestDTO = new EmployerBankDetailsResponseDTO();
+        EmployerBankDetailDTO employerBankDetailDTO = new EmployerBankDetailDTO();
+        employerBankDetailDTO.setEmployerGroupId("validGroupId");
+
+        ContributionBankAccountDTO contributionBankAccountDTO = new ContributionBankAccountDTO();
+        BankAccountIdentifierDTO bankAccountIdentifierDTO = new BankAccountIdentifierDTO();
+        bankAccountIdentifierDTO.setBankAccountNumber("12345678901234567");
+        bankAccountIdentifierDTO.setBankRoutingNumber("123456789");
+        contributionBankAccountDTO.setBankAccountIdentifier(bankAccountIdentifierDTO);
+        contributionBankAccountDTO.setBankAccountTypeCode(
+                new BankAccountTypeCodeDTO("S", "Savings"));
+        contributionBankAccountDTO.setBankAccountStatus(new BankAccountStatusDTO("A", "Active"));
+        contributionBankAccountDTO.setBankAccountOperation("ADD");
+        contributionBankAccountDTO.setBankSequenceNumber("1");
+
+        employerBankDetailDTO.setContributionBankAccounts(
+                Collections.singletonList(contributionBankAccountDTO));
+        requestDTO.setEmployerBankDetail(employerBankDetailDTO);
+
+        return requestDTO;
+    }
+
+    private BankAccountResponse createDummyBankAccountResponse() {
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setId(1001L);
+        bankAccountDTO.setEmployerId(2002L);
+        bankAccountDTO.setUsage("Business");
+        bankAccountDTO.setBankName("ABC Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("9876543210123456");
+        bankAccountDTO.setAccountType("Savings");
+        bankAccountDTO.setNickName("Business Account");
+        bankAccountDTO.setAccountStatus("Active");
+        bankAccountDTO.setStartDate(LocalDateTime.now().minusYears(1));
+        bankAccountDTO.setEndDate(LocalDateTime.now().plusYears(1));
+
+        BankAccountResponse bankAccountResponse = new BankAccountResponse();
+        bankAccountResponse.setData(bankAccountDTO);
+        bankAccountResponse.setStatus("SUCCESS");
+
+        return bankAccountResponse;
+    }
+}
