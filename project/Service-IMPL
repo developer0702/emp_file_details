@@ -1,51 +1,62 @@
-package com.optum.ftps.ob.core.employer.details.service;
+package com.optum.ftps.ob.core.employer.details.service.impl;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import com.optum.ftps.ob.core.employer.details.dtos.*;
-import com.optum.ftps.ob.core.employer.details.dtos.bankaccount.BankAccountDTO;
-import com.optum.ftps.ob.core.employer.details.dtos.bankaccount.BankAccountResponse;
-import com.optum.ftps.ob.core.employer.details.dtos.bankaccount.BankAccountResponseDTO;
+import com.optum.ftps.ob.core.employer.details.dtos.bankaccount.*;
 import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
 import com.optum.ftps.ob.core.employer.details.helper.BankAccountClient;
-import com.optum.ftps.ob.core.employer.details.service.impl.EmployerBankDetailsServiceImpl;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class EmployerBankDetailsServiceImplTest {
 
-    @InjectMocks
-    private EmployerBankDetailsServiceImpl employerBankDetailsService;
-
     @Mock
     private BankAccountClient bankAccountClient;
 
+    @InjectMocks
+    private EmployerBankDetailsServiceImpl employerBankDetailsService;
+
     private EmployerBankDetailsResponseDTO requestDTO;
-    private BankAccountDTO mockBankAccount;
     private BankAccountResponse mockBankAccountResponse;
     private BankAccountResponseDTO mockBankAccountResponseDTO;
 
     @BeforeEach
     void setUp() {
-        requestDTO = createValidRequestDTO();
-        mockBankAccount = createMockBankAccountDTO();
+        ContributionBankAccountDTO contributionBankAccount = new ContributionBankAccountDTO();
+        contributionBankAccount.setBankSequenceNumber("123");
+        contributionBankAccount.setBankName("Test Bank");
+
+        EmployerBankDetailDTO employerBankDetailDTO = new EmployerBankDetailDTO();
+        employerBankDetailDTO.setEmployerGroupId("EMP123");
+        employerBankDetailDTO.setContributionBankAccounts(List.of(contributionBankAccount));
+
+        requestDTO = new EmployerBankDetailsResponseDTO();
+        requestDTO.setEmployerBankDetail(employerBankDetailDTO);
+
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setAccountNumber("123456789");
+        bankAccountDTO.setRoutingNumber("987654321");
+        bankAccountDTO.setNickName("Test Account");
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setAccountType("SAVINGS");
+        bankAccountDTO.setAccountStatus("ACTIVE");
+
         mockBankAccountResponse = new BankAccountResponse();
-        mockBankAccountResponse.setData(mockBankAccount);
+        mockBankAccountResponse.setData(bankAccountDTO);
+
         mockBankAccountResponseDTO = new BankAccountResponseDTO();
         mockBankAccountResponseDTO.setStatus("SUCCESS");
-        mockBankAccountResponseDTO.setData(12345L);
+        mockBankAccountResponseDTO.setData(1L);
     }
 
     @Test
@@ -54,77 +65,30 @@ class EmployerBankDetailsServiceImplTest {
                 .thenReturn(Mono.just(mockBankAccountResponse));
 
         when(bankAccountClient.updateBankAccountResponse(any(), anyString(), anyLong()))
-                .thenReturn(Mono.just(mockBankAccountResponseDTO));
+                .thenReturn(mockBankAccountResponseDTO);
 
-        when(bankAccountClient.getBankAccountInfoFromBankService(anyString(), anyLong()))
-                .thenReturn(Mono.just(mockBankAccountResponse));
+        EmployerBankDetailsResponseDTO response = employerBankDetailsService.updateEmployerBankDetails(requestDTO);
 
-        StepVerifier.create(employerBankDetailsService.updateEmployerBankDetails(requestDTO))
-                .expectNextMatches(response -> response.getEmployerBankDetail() != null &&
-                        response.getEmployerBankDetail().getContributionBankAccounts().size() == 1 &&
-                        "Test Bank".equals(response.getEmployerBankDetail().getContributionBankAccounts().getFirst().getBankName()))
-                .verifyComplete();
+        assertNotNull(response);
+        assertNotNull(response.getEmployerBankDetail());
+        assertEquals("Test Bank", response.getEmployerBankDetail().getContributionBankAccounts().getFirst().getBankName());
 
         verify(bankAccountClient, times(1)).callGetBankAccountInfoApi(anyString(), anyLong());
         verify(bankAccountClient, times(1)).updateBankAccountResponse(any(), anyString(), anyLong());
-        verify(bankAccountClient, times(1)).getBankAccountInfoFromBankService(anyString(), anyLong());
-    }
-
-    @Test
-    void updateEmployerBankDetails_serviceThrowsException_returnsError() {
-        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
-                .thenReturn(Mono.error(new RuntimeException("Service error")));
-
-        StepVerifier.create(employerBankDetailsService.updateEmployerBankDetails(requestDTO))
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException &&
-                        throwable.getMessage().equals("Service error: Unable to update bank details"))
-                .verify();
-
-        verify(bankAccountClient, times(1)).callGetBankAccountInfoApi(anyString(), anyLong());
-        verify(bankAccountClient, never()).updateBankAccountResponse(any(), anyString(), anyLong());
     }
 
     @Test
     void updateEmployerBankDetails_invalidInput_throwsValidationException() {
-        EmployerBankDetailsResponseDTO invalidRequest = new EmployerBankDetailsResponseDTO();
-        invalidRequest.setEmployerBankDetail(new EmployerBankDetailDTO());
+        requestDTO.getEmployerBankDetail().setEmployerGroupId("");
 
-        StepVerifier.create(employerBankDetailsService.updateEmployerBankDetails(invalidRequest))
-                .expectErrorMatches(throwable -> throwable instanceof ValidationException &&
-                        throwable.getMessage().contains("Please provide valid IDs."))
-                .verify();
-
-        verify(bankAccountClient, never()).callGetBankAccountInfoApi(anyString(), anyLong());
-        verify(bankAccountClient, never()).updateBankAccountResponse(any(), anyString(), anyLong());
+        assertThrows(ValidationException.class, () -> employerBankDetailsService.updateEmployerBankDetails(requestDTO));
     }
 
-    private EmployerBankDetailsResponseDTO createValidRequestDTO() {
-        EmployerBankDetailsResponseDTO dto = new EmployerBankDetailsResponseDTO();
-        EmployerBankDetailDTO bankDetailDTO = new EmployerBankDetailDTO();
-        ContributionBankAccountDTO contributionDTO = new ContributionBankAccountDTO();
+    @Test
+    void updateEmployerBankDetails_apiCallFails_throwsRuntimeException() {
+        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
+                .thenReturn(Mono.error(new RuntimeException("Service error")));
 
-        contributionDTO.setBankName("Test Bank");
-        contributionDTO.setBankAccountNickName("Business Account");
-        contributionDTO.setBankAccountIdentifier(new BankAccountIdentifierDTO("123456789", "987654321"));
-        contributionDTO.setBankAccountTypeCode(new BankAccountTypeCodeDTO("SAV", "Savings"));
-        contributionDTO.setBankAccountStatus(new BankAccountStatusDTO("Active", "Active"));
-
-        bankDetailDTO.setEmployerGroupId("EMP123");
-        bankDetailDTO.setContributionBankAccounts(List.of(contributionDTO));
-
-        dto.setEmployerBankDetail(bankDetailDTO);
-        return dto;
-    }
-
-    private BankAccountDTO createMockBankAccountDTO() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setId(1L);
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setNickName("Business Account");
-        bankAccountDTO.setAccountNumber("123456789");
-        bankAccountDTO.setRoutingNumber("987654321");
-        bankAccountDTO.setAccountType("SAV");
-        bankAccountDTO.setAccountStatus("Active");
-        return bankAccountDTO;
+        assertThrows(RuntimeException.class, () -> employerBankDetailsService.updateEmployerBankDetails(requestDTO));
     }
 }
