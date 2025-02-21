@@ -1,0 +1,151 @@
+package com.optum.ftps.ob.core.employer.details.validator;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.model.v1.*;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+public class EmployerBankDetailsValidatorTest {
+
+    private final EmployerBankDetailsValidator validator = new EmployerBankDetailsValidator();
+
+    /** ✅ Test: Valid employer bank details */
+    @Test
+    void testValidateEmployerBankDetails_validRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = createValidRequest();
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertTrue(errors.isEmpty(), "Expected no validation errors for a valid request.");
+    }
+
+    /** ✅ Test: Invalid employer bank details */
+    @Test
+    void testValidateEmployerBankDetails_invalidRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = createInvalidRequest();
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty(), "Expected validation errors for an invalid request.");
+        assertTrue(errors.contains(1001), "Missing expected error code 1001 for invalid requestId.");
+        assertTrue(errors.contains(1002), "Missing expected error code 1002 for invalid bank account.");
+        assertTrue(errors.contains(1003), "Missing expected error code 1003 for invalid routing number.");
+        assertEquals(3, errors.size(), "Expected exactly 3 validation errors.");
+    }
+
+    /** ✅ Test: Empty request (should fail all validations) */
+    @Test
+    void testValidateEmployerBankDetails_emptyRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty(), "Expected validation errors for an empty request.");
+        assertTrue(errors.size() > 2, "Expected multiple validation errors.");
+    }
+
+    /** ✅ Test: Request with null fields */
+    @Test
+    void testValidateEmployerBankDetails_nullFields() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setEmployerBankDetail(null);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
+        assertTrue(errors.contains(2001), "Missing expected error code 2001 for null requestId.");
+        assertTrue(errors.contains(2002), "Missing expected error code 2002 for null employer details.");
+        assertEquals(2, errors.size(), "Expected exactly 2 validation errors.");
+    }
+
+    /** ✅ Test: Multiple invalid bank accounts */
+    @Test
+    void testValidateEmployerBankDetails_multipleInvalidAccounts() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = createInvalidRequest();
+
+        // Add another invalid account
+        ContributionBankAccount secondInvalidAccount = new ContributionBankAccount();
+        BankAccountIdentifier secondBankAccountIdentifier = new BankAccountIdentifier();
+        secondBankAccountIdentifier.setBankAccountNumber("wrongNum2");
+        secondBankAccountIdentifier.setBankRoutingNumber("wrongRouting2");
+        secondInvalidAccount.setBankAccountIdentifier(secondBankAccountIdentifier);
+        secondInvalidAccount.setBankAccountTypeCode(new BankAccountTypeCode("X", "InvalidType"));
+        secondInvalidAccount.setBankAccountStatus(new BankAccountStatus("X", "InvalidStatus"));
+        secondInvalidAccount.setBankAccountOperation("INVALID");
+
+        request.getEmployerBankDetail().getContributionBankAccounts().add(secondInvalidAccount);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty(), "Expected validation errors for multiple invalid accounts.");
+        assertTrue(errors.size() > 3, "Expected more errors due to multiple invalid accounts.");
+    }
+
+    /** ✅ Test: Missing bank account details */
+    @Test
+    void testValidateEmployerBankDetails_missingBankDetails() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = createValidRequest();
+        request.getEmployerBankDetail().setContributionBankAccounts(null);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty(), "Expected validation errors for missing bank details.");
+        assertTrue(errors.contains(3001), "Missing expected error code 3001 for missing bank account.");
+    }
+
+    /** ✅ Helper Method: Creates a valid request */
+    private UpdateEmpBankDetailsRequest createValidRequest() {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("12345");
+        request.setRequestUserId("user1");
+        request.setSourceSystemId("4");
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("EMP1001");
+
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber("32325435435465456");
+        bankAccountIdentifier.setBankRoutingNumber("041215032");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("C", "Checking"));
+        contributionBankAccount.setBankName("PUNJAB NATIONAL BANK");
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("A", "Active"));
+        contributionBankAccount.setBankSequenceNumber("14");
+        contributionBankAccount.setBankAccountNickName("HUNTINGTON NATIONAL BANK 5456");
+        contributionBankAccount.setBankAccountOperation("Update");
+
+        employerBankDetail.setContributionBankAccounts(Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        return request;
+    }
+
+    /** ✅ Helper Method: Creates an invalid request */
+    private UpdateEmpBankDetailsRequest createInvalidRequest() {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("invalidRequestIdThatIsWayTooLong");
+        request.setRequestUserId("invalidUserId");
+        request.setSourceSystemId("invalidSource");
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("invalidGroup");
+
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber("invalidAccount");
+        bankAccountIdentifier.setBankRoutingNumber("invalidRouting");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("X", "InvalidType"));
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("X", "InvalidStatus"));
+        contributionBankAccount.setBankAccountOperation("INVALID");
+
+        employerBankDetail.setContributionBankAccounts(Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        return request;
+    }
+}
