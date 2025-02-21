@@ -1,2 +1,12 @@
-C:\Users\sraj91\old emp-bank\ob-core-employer-details-api\ob-core-employer-details-api\src\main\java\com\optum\ftps\ob\core\employer\details\validator\EmployerBankDetailsValidator.java:76:43
-java: incompatible thrown types com.optum.ftps.ob.core.employer.details.exceptions.ValidationException in functional expression
+private boolean isValidLength(String field, int maxLength, String fieldName) {
+    if (field == null) {
+        log.error("{} is null", fieldName);
+        return false;
+    }
+    String trimmedField = field.trim();
+    if (trimmedField.length() > maxLength) {
+        log.error("{} exceeds max length {}: {}", fieldName, maxLength, trimmedField);
+        return false;
+    }
+    return true;
+}
