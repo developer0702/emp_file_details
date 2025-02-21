@@ -1,0 +1,356 @@
+=====================validatir==================
+package com.optum.ftps.ob.core.employer.details.validator;
+
+import com.optum.ftps.ob.core.employer.details.constants.EmployerDetailsConstants;
+import com.optum.ftps.ob.core.employer.details.constants.ErrorCodeConstants;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class EmployerDetailsValidator {
+
+    public List<Integer> validateEmployerDetailsById(String empGroupId) {
+        log.info("Validating employer details" + " for employer group id: {}", empGroupId);
+        List<Integer> errors = new ArrayList<>();
+        if (Objects.isNull(empGroupId) || checkFieldsPresent(empGroupId)) {
+            errors.add(ErrorCodeConstants.REQUIRED_FIELDS_MISSING);
+        }
+        if (checkFormat(empGroupId, true)) {
+            errors.add(ErrorCodeConstants.INCORRECT_FORMAT);
+        }
+        return errors;
+    }
+
+    public List<Integer> validateEmployerDetailsByName(String empGroupName) {
+        log.info("Validating employer details" + " for employer group name: {}", empGroupName);
+        List<Integer> errors = new ArrayList<>();
+        if (Objects.isNull(empGroupName) || checkFieldsPresent(empGroupName)) {
+            errors.add(ErrorCodeConstants.REQUIRED_FIELDS_MISSING);
+        }
+        if (checkFormat(empGroupName, false)) {
+            errors.add(ErrorCodeConstants.INCORRECT_FORMAT);
+        }
+        return errors;
+    }
+
+    boolean checkFieldsPresent(String searchField) {
+        return searchField.trim().isEmpty();
+    }
+
+    boolean checkFormat(String searchField, boolean isEmpGroupId) {
+        if (isEmpGroupId) {
+            return searchField.trim().length()
+                    > EmployerDetailsConstants.EMPLOYER_GROUPNUMBER_LENGTH;
+        }
+        return searchField.trim().length() > EmployerDetailsConstants.EMPLOYER_GROUPNAME_LENGTH;
+    }
+}
+
+
+==================serviceImpl======================
+package com.optum.ftps.ob.core.employer.details.service.impl;
+
+import com.optum.ftps.ob.core.employer.details.constants.BankAccountConstants;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountIdentifierDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountStatusDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountTypeCodeDTO;
+import com.optum.ftps.ob.core.employer.details.dto.ContributionBankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailDTO;
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
+import com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+
+import reactor.core.publisher.Mono;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsService {
+
+    private final BankAccountClient bankAccountClient;
+
+    private static EmployerBankDetailDTO getEmployerBankDetailDTO(
+            BankAccountDTO bankAccountResponse,
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var contributionBankAccountDTO = new ContributionBankAccountDTO();
+        var bankAccountIdentifierDTO = new BankAccountIdentifierDTO();
+        bankAccountIdentifierDTO.setBankAccountNumber(bankAccountResponse.getAccountNumber());
+        bankAccountIdentifierDTO.setBankRoutingNumber(bankAccountResponse.getRoutingNumber());
+
+        contributionBankAccountDTO.setBankAccountIdentifier(bankAccountIdentifierDTO);
+        contributionBankAccountDTO.setBankAccountNickName(bankAccountResponse.getNickName());
+        contributionBankAccountDTO.setBankName(bankAccountResponse.getBankName());
+        contributionBankAccountDTO.setBankSequenceNumber(
+                String.valueOf(bankAccountResponse.getId()));
+        var bankAccountTypeCode = new BankAccountTypeCodeDTO();
+        bankAccountTypeCode.setCode(bankAccountResponse.getAccountType());
+        bankAccountTypeCode.setCodeName(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .getFirst()
+                        .getBankAccountTypeCode()
+                        .getCodeName());
+        contributionBankAccountDTO.setBankAccountTypeCode(bankAccountTypeCode);
+        var bankAccountStatus = new BankAccountStatusDTO();
+        bankAccountStatus.setCodeName(bankAccountResponse.getAccountStatus());
+        bankAccountStatus.setCode(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .getFirst()
+                        .getBankAccountStatus()
+                        .getCode());
+        contributionBankAccountDTO.setBankAccountStatus(bankAccountStatus);
+        contributionBankAccountDTO.setBankAccountOperation(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .getFirst()
+                        .getBankAccountOperation());
+        List<ContributionBankAccountDTO> contributionBankAccounts = new ArrayList<>();
+        contributionBankAccounts.add(contributionBankAccountDTO);
+        var employerBankDetailDTO = new EmployerBankDetailDTO();
+        employerBankDetailDTO.setContributionBankAccounts(contributionBankAccounts);
+        return employerBankDetailDTO;
+    }
+
+    @Override
+    public EmployerBankDetailsResponseDTO updateEmployerBankDetails(
+            EmployerBankDetailsResponseDTO employerBankDetailDTO) throws ValidationException {
+        var employerGroupId = employerBankDetailDTO.getEmployerBankDetail().getEmployerGroupId();
+        var sequenceNo =
+                employerBankDetailDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .getFirst()
+                        .getBankSequenceNumber();
+
+        if (employerGroupId == null
+                || employerGroupId.trim().isEmpty()
+                || sequenceNo == null
+                || sequenceNo.trim().isEmpty()) {
+            throw new ValidationException("employerGroupId and sequenceNo not valid. Please provide valid IDs.");
+        }
+
+        log.debug(employerGroupId);
+        Mono<BankAccountResponse> response =
+                bankAccountClient.callGetBankAccountInfoApi(
+                        employerGroupId, Long.valueOf(sequenceNo));
+        BankAccountResponse bankAccountDTO1 = response.block();
+
+        var bankAccountDTO = updateBankDetails(employerBankDetailDTO, bankAccountDTO1.getData());
+        var bankAccountResponseDTO =
+                bankAccountClient.updateBankAccountResponse(
+                        bankAccountDTO, employerGroupId, Long.valueOf(sequenceNo));
+        return getEmployerBankDetailsResponseDTO(
+                employerBankDetailDTO, bankAccountResponseDTO, employerGroupId);
+    }
+
+    private BankAccountDTO updateBankDetails(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO,
+            BankAccountDTO bankAccountDTO) {
+
+        List<ContributionBankAccountDTO> contributionBankAccounts =
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts();
+        for (ContributionBankAccountDTO contributionBankAccountDTO : contributionBankAccounts) {
+            bankAccountDTO.setBankName(contributionBankAccountDTO.getBankName());
+            bankAccountDTO.setNickName(contributionBankAccountDTO.getBankAccountNickName());
+            bankAccountDTO.setAccountNumber(
+                    contributionBankAccountDTO.getBankAccountIdentifier().getBankAccountNumber());
+            bankAccountDTO.setRoutingNumber(
+                    contributionBankAccountDTO.getBankAccountIdentifier().getBankRoutingNumber());
+            bankAccountDTO.setAccountStatus(
+                    contributionBankAccountDTO.getBankAccountStatus().getCodeName());
+            bankAccountDTO.setUsage(BankAccountConstants.HSA_FUNDING);
+            bankAccountDTO.setSource(BankAccountConstants.EUREKA);
+            bankAccountDTO.setCorrelationId("1234");
+            bankAccountDTO.setAccountType(
+                    contributionBankAccountDTO.getBankAccountTypeCode().getCode());
+            bankAccountDTO.setNickName(contributionBankAccountDTO.getBankAccountNickName());
+        }
+        return bankAccountDTO;
+    }
+
+    private EmployerBankDetailsResponseDTO getEmployerBankDetailsResponseDTO(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO,
+            BankAccountResponseDTO bankAccountResponseDTO,
+            String employerGroupId) {
+        if (Objects.nonNull(bankAccountResponseDTO)
+                && bankAccountResponseDTO
+                .getStatus()
+                .equalsIgnoreCase(BankAccountConstants.SUCCESS)
+                && bankAccountResponseDTO.getData() > 0) {
+            var bankAccountResponse =
+                    bankAccountClient.getBankAccountInfoFromBankService(
+                            employerGroupId, bankAccountResponseDTO.getData());
+            if (Objects.nonNull(bankAccountResponse)) {
+                var employerBankDetailDTO =
+                        getEmployerBankDetailDTO(
+                                bankAccountResponse.getData(), employerBankDetailsResponseDTO);
+                employerBankDetailsResponseDTO.setEmployerBankDetail(employerBankDetailDTO);
+                employerBankDetailsResponseDTO.setRequestUserId(
+                        employerBankDetailsResponseDTO.getRequestUserId());
+                employerBankDetailsResponseDTO.setRequestId(
+                        employerBankDetailsResponseDTO.getRequestId());
+                employerBankDetailsResponseDTO.setSourceSystemId(
+                        employerBankDetailsResponseDTO.getSourceSystemId());
+                return employerBankDetailsResponseDTO;
+            }
+        }
+        return null;
+    }
+}
+
+
+====================helper=============
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import reactor.core.publisher.Mono;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class BankAccountClient {
+
+    //    private static final String GET_SPECIFIC_BANK_ACCOUNT_INFO_API =
+    //            "/employer/{employerGroupId}/bank-account";
+    private static final String GET_SPECIFIC_BANK_ACCOUNT_API =
+            "/employer/{employerGroupId}/bank-account/{id}";
+    private static final String UPDATE_SPECIFIC_BANK_ACCOUNT_API =
+            "/employer/{employerGroupId}/bank-account/{id}";
+
+    private final WebClient employerWebClient;
+
+    public BankAccountResponseDTO updateBankAccountResponse(
+            BankAccountDTO bankAccountDTO, String employerGroupId, Long id) {
+
+        try {
+            return callUpdateBankAccountApi(bankAccountDTO, employerGroupId, id).block();
+        } catch (Exception e) {
+            log.error(
+                    "Error updating bank account for Employer Group ID: {},{}",
+                    employerGroupId,
+                    id,
+                    e.getMessage());
+        }
+        return null;
+    }
+
+    public BankAccountResponse getBankAccountInfoFromBankService(String employerGroupId, Long id) {
+        return callGetBankAccountInfoApi(employerGroupId, id).block();
+    }
+
+    public Mono<BankAccountResponseDTO> callUpdateBankAccountApi(
+            BankAccountDTO bankAccountDTO, String employerGroupId, Long id) {
+        Mono<BankAccountResponseDTO> bankAccountResponseDTO = null;
+        bankAccountResponseDTO =
+                employerWebClient
+                        .post()
+                        .uri(
+                                uriBuilder ->
+                                        uriBuilder
+                                                .path(UPDATE_SPECIFIC_BANK_ACCOUNT_API)
+                                                .build(employerGroupId, id))
+                        .body(Mono.just(bankAccountDTO), BankAccountDTO.class)
+                        .retrieve()
+                        .bodyToMono(BankAccountResponseDTO.class)
+                        .onErrorResume(
+                                WebClientResponseException.NotFound.class,
+                                e -> {
+                                    log.error("404  Found: {}", e.getMessage());
+                                    return Mono.empty();
+                                });
+        return bankAccountResponseDTO;
+    }
+
+    public Mono<BankAccountResponse> callGetBankAccountInfoApi(String employerGroupId, Long id) {
+
+        return employerWebClient
+                .get()
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path(GET_SPECIFIC_BANK_ACCOUNT_API)
+                                        .build(employerGroupId, id))
+                .retrieve()
+                .bodyToMono(BankAccountResponse.class)
+                .onErrorResume(
+                        WebClientResponseException.NotFound.class,
+                        e -> {
+                            log.error("404 Not Found: {}", e.getMessage());
+                            return Mono.empty();
+                        });
+    }
+}
+
+==========mapper=====================
+package com.optum.ftps.ob.core.employer.details.mapper;
+
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
+import org.mapstruct.ReportingPolicy;
+
+@Mapper(
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface EmployerBankDetailsMapper {
+    @Mapping(target = "employerBankDetail", source = "employerBankDetail")
+    EmployerBankDetailsResponseDTO map(UpdateEmpBankDetailsRequest request);
+}
+========================mapper response 
+package com.optum.ftps.ob.core.employer.details.mapper;
+
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsResponse;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingConstants;
+import org.mapstruct.ReportingPolicy;
+
+@Mapper(
+        componentModel = MappingConstants.ComponentModel.SPRING,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface EmployerBankDetailsResponseMapper {
+    //    @Mapping(target = "employerBankDetails", source = "employerBankDetailDTO")
+    UpdateEmpBankDetailsResponse map(EmployerBankDetailsResponseDTO responseDTO);
+}
