@@ -1,3 +1,33 @@
+
+
+package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import lombok.Data;
+
+@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public abstract class AbstractRequestData {
+    private String source;
+    private String correlationId;
+}
+
+==============BankAccountResponse===================
+
+package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+public class BankAccountResponse {
+    private BankAccountDTO data;
+    private String status;
+}
+
+=========string util======================
 package com.optum.ftps.ob.core.employer.details.util;
 
 import org.apache.commons.lang3.StringUtils;
