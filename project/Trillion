@@ -1,7 +1,9 @@
 
+
 import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
 import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsMapper;
 import com.optum.ftps.ob.core.employer.details.mapper.EmployerBankDetailsResponseMapper;
+import com.optum.ftps.ob.core.employer.details.model.v1.Status;
 import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsRequest;
 import com.optum.ftps.ob.core.employer.details.model.v1.UpdateEmpBankDetailsResponse;
 import com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsService;
@@ -23,11 +25,8 @@ import static org.mockito.Mockito.when;
 public class EmployerBankDetailsControllerTest {
 
     @Mock private EmployerBankDetailsService employerBankDetailsService;
-
     @Mock private EmployerBankDetailsValidator employerBankDetailsValidator;
-
     @Mock private EmployerBankDetailsMapper employerBankDetailsMapper;
-
     @Mock private EmployerBankDetailsResponseMapper employerBankDetailsResponseMapper;
 
     @InjectMocks private EmployerBankDetailsController employerBankDetailsController;
@@ -41,6 +40,8 @@ public class EmployerBankDetailsControllerTest {
     void updEmployerBankDetails_validRequest_returnsOk() throws ValidationException {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
         UpdateEmpBankDetailsResponse response = new UpdateEmpBankDetailsResponse();
+        response.setStatus(new Status("200", "Success"));
+
         when(employerBankDetailsValidator.validateEmployerBankDetails(request))
                 .thenReturn(Collections.emptySet());
         when(employerBankDetailsMapper.map(request)).thenReturn(null);
@@ -64,7 +65,7 @@ public class EmployerBankDetailsControllerTest {
                 employerBankDetailsController.updEmployerBankDetails(request);
 
         assertEquals(HttpStatus.BAD_REQUEST, result.getStatusCode());
-        assertEquals("400", result.getBody().getStatus());
+        assertEquals("400", result.getBody().getStatus().getStatusCode());
     }
 
     @Test
@@ -80,7 +81,7 @@ public class EmployerBankDetailsControllerTest {
         ResponseEntity<UpdateEmpBankDetailsResponse> result =
                 employerBankDetailsController.updEmployerBankDetails(request);
 
-        assertEquals(HttpStatus.CREATED, result.getStatusCode());
-        assertEquals("200", result.getBody().getStatus());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
+        assertEquals("500", result.getBody().getStatus().getStatusCode());
     }
 }
