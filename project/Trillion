@@ -1,4 +1,12 @@
 
+if (responseDTO == null) {
+            log.error("Service call failed, received null response");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(buildErrorResponse("500", "Service response is null"));
+        }
+
+
+****************************************
 public ResponseEntity<UpdateEmpBankDetailsResponse> updEmployerBankDetails(
         @Valid @RequestBody UpdateEmpBankDetailsRequest request) throws ValidationException {
     
