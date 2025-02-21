@@ -25,6 +25,7 @@ class EmployerBankDetailsValidatorTest {
     @Test
     void testValidateEmployerBankDetails_RequiredFieldsMissing() {
         UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setEmployerBankDetail(new EmployerBankDetail()); // Ensure EmployerBankDetail is initialized
         Set<Integer> errors = validator.validateEmployerBankDetails(request);
         assertEquals(Set.of(ErrorCodeConstants.REQUIRED_FIELDS_MISSING), errors, "Unexpected error codes found");
     }
@@ -76,8 +77,8 @@ class EmployerBankDetailsValidatorTest {
     }
 
     private UpdateEmpBankDetailsRequest createInvalidRequest() {
-        UpdateEmpBankDetailsRequest request = createValidRequest();
-        request.getEmployerBankDetail().setContributionBankAccounts(Collections.emptyList());
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setEmployerBankDetail(new EmployerBankDetail()); // Ensure EmployerBankDetail is initialized
         return request;
     }
 }
