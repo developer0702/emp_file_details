@@ -1,3 +1,33 @@
+{
+  "employerBankDetail": {
+    "employerGroupId": "TST_EMP1001",
+    "contributionBankAccounts": [
+      {
+        "bankAccountIdentifier": {
+          "bankAccountNumber": "32325435435465456",
+          "bankRoutingNumber": "041215032"
+        },
+        "bankAccountTypeCode": {
+          "code": "C",
+          "codeName": "Checking"
+        },
+        "bankName": "PUNJAB NATIONAL BANK",
+        "bankAccountStatus": {
+          "code": "A",
+          "codeName": "Active"
+        },
+        "bankSequenceNumber": "14",
+        "bankAccountNickName": "HUNTINGTON NATIONAL BANK 5456",
+        "bankAccountOperation": "Update"
+      }
+    ]
+  },
+  "requestId": "-4123525199855273062",
+  "requestUserId": "prajula1",
+  "sourceSystemId": "4"
+}
+
+
 package com.optum.ftps.ob.core.employer.details.controller;
 
 import com.optum.ftps.ob.core.employer.details.dtos.EmployerBankDetailsRequestDTO;
