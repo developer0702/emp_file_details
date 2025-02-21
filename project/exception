@@ -1,3 +1,15 @@
+// Assertions
+        assertNotNull(response, "Response should not be null");
+        assertNotNull(response.getEmployerBankDetail(), "EmployerBankDetail should not be null");
+        assertNotNull(response.getEmployerBankDetail().getContributionBankAccounts(), "ContributionBankAccounts should not be null");
+        assertEquals("Test Bank", response.getEmployerBankDetail().getContributionBankAccounts().getFirst().getBankName());
+
+
+
+
+
+
+
 OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
 
 org.opentest4j.AssertionFailedError: expected: not <null>
