@@ -1,42 +1,86 @@
-public Set<Integer> validateEmployerBankDetails(UpdateEmpBankDetailsRequest request) {
-    Set<Integer> errors = new HashSet<>();
+package com.optum.ftps.ob.core.employer.details.validator;
 
-    if (request == null) {
-        errors.add(2000); // Error code for null request
-        return errors;
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.optum.ftps.ob.core.employer.details.exceptions.ValidationException;
+import com.optum.ftps.ob.core.employer.details.model.v1.*;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.Set;
+
+public class EmployerBankDetailsValidatorTest {
+
+    private final EmployerBankDetailsValidator validator = new EmployerBankDetailsValidator();
+
+    @Test
+    void testValidateEmployerBankDetails_validRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId("-4123525199855273062");
+        request.setRequestUserId("prajula1");
+        request.setSourceSystemId("4");
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId("TST_EMP1001");
+
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber("32325435435465456");
+        bankAccountIdentifier.setBankRoutingNumber("041215032");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode("C", "Checking"));
+        contributionBankAccount.setBankName("PUNJAB NATIONAL BANK");
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus("A", "Active"));
+        contributionBankAccount.setBankSequenceNumber("14");
+        contributionBankAccount.setBankAccountNickName("HUNTINGTON NATIONAL BANK 5456");
+        contributionBankAccount.setBankAccountOperation("Update");
+
+        employerBankDetail.setContributionBankAccounts(
+                Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertTrue(errors.isEmpty());
     }
 
-    if (request.getEmployerBankDetail() == null) {
-        errors.add(2002); // Error code for missing employer details
-        return errors;
+    @Test
+    void testValidateEmployerBankDetails_invalidRequest() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setRequestId(null);
+        request.setRequestUserId(null);
+        request.setSourceSystemId(null);
+
+        EmployerBankDetail employerBankDetail = new EmployerBankDetail();
+        employerBankDetail.setEmployerGroupId(null);
+
+        ContributionBankAccount contributionBankAccount = new ContributionBankAccount();
+        BankAccountIdentifier bankAccountIdentifier = new BankAccountIdentifier();
+        bankAccountIdentifier.setBankAccountNumber(null);
+        bankAccountIdentifier.setBankRoutingNumber(null);
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        contributionBankAccount.setBankAccountTypeCode(new BankAccountTypeCode(null, "InvalidType"));
+        contributionBankAccount.setBankAccountStatus(new BankAccountStatus(null, "InvalidStatus"));
+        contributionBankAccount.setBankAccountOperation(null);
+
+        employerBankDetail.setContributionBankAccounts(
+                Collections.singletonList(contributionBankAccount));
+        request.setEmployerBankDetail(employerBankDetail);
+
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
+
+        assertFalse(errors.isEmpty());
     }
 
-    // Ensure employerBankDetail is non-null before calling sanitizeRequest()
-    sanitizeRequest(request.getEmployerBankDetail());
+    @Test
+    void testValidateEmployerBankDetails_nullFields() throws ValidationException {
+        UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
+        request.setEmployerBankDetail(null); // Simulating a null EmployerBankDetail
 
-    return errors;
-}
+        Set<Integer> errors = validator.validateEmployerBankDetails(request);
 
-private void sanitizeRequest(EmployerBankDetail employerBankDetail) {
-    if (employerBankDetail == null) {
-        return; // Avoid NPE
-    }@Test
-void testValidateEmployerBankDetails_nullFields() throws ValidationException {
-    UpdateEmpBankDetailsRequest request = new UpdateEmpBankDetailsRequest();
-    request.setEmployerBankDetail(null); // Simulating a null EmployerBankDetail
-
-    Set<Integer> errors = assertDoesNotThrow(() -> validator.validateEmployerBankDetails(request),
-        "Validator should handle null fields gracefully without throwing NullPointerException.");
-
-    assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
-    assertTrue(errors.contains(2002), "Expected error code 2002 for missing employer details.");
-}
-
-
-    if (employerBankDetail.getEmployerGroupId() == null) {
-        employerBankDetail.setEmployerGroupId(""); // Default empty value
+        assertFalse(errors.isEmpty(), "Expected validation errors for null fields.");
+        assertTrue(errors.contains(2002), "Expected error code 2002 for missing employer details.");
     }
-
-    // Add further checks for other fields...
 }
-
