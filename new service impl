@@ -1,0 +1,167 @@
+package com.optum.ftps.ob.core.employer.details.service.impl;
+
+
+import com.optum.ftps.ob.core.employer.details.constants.BankAccountConstants;
+import com.optum.ftps.ob.core.employer.details.dto.*;
+
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
+import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
+
+import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
+import com.optum.ftps.ob.core.employer.details.resolver.EmployerContributionHelper;
+import com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsService {
+
+    private final BankAccountClient bankAccountClient;
+
+    @Override
+    public EmployerBankDetailsResponseDTO updateEmployerBankDetails(
+            EmployerBankDetailsResponseDTO employerBankDetailDTO) throws ServiceException {
+        var employerGroupId = employerBankDetailDTO.getEmployerBankDetail().getEmployerGroupId();
+        var sequenceNo =
+                employerBankDetailDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .get(0)
+                        .getBankSequenceNumber();
+
+        log.debug(employerGroupId);
+
+        BankAccountResponseDTO bankAccountResponseDTO = null;
+        try {
+            Mono<BankAccountResponse> response =
+                    bankAccountClient.callGetBankAccountInfoApi(
+                            employerGroupId, Long.valueOf(sequenceNo));
+            BankAccountResponse bankAccountDTO1 = response.block();
+
+            var bankAccountDTO = updateBankDetails(employerBankDetailDTO, bankAccountDTO1.getData());
+
+            bankAccountResponseDTO =
+                    bankAccountClient.updateBankAccountResponse(bankAccountDTO, employerGroupId, bankAccountDTO.getId());
+        } catch (WebClientResponseException e) {
+            log.info("Status code: {}", e.getStatusCode());
+            if (e.getStatusCode().value() == 500) {
+                var errorItem =
+                        ErrorItem.builder()
+                                .statusCode("500")
+                                .severity("ERR")
+                                .statusDescription("Employer Not Found")
+                                .build();
+                throw new ServiceException(List.of(errorItem));
+            } else if (e.getStatusCode().value() == 401) {
+                var errorItem =
+                        ErrorItem.builder()
+                                .statusCode("401")
+                                .severity("ERR")
+                                .statusDescription("Unauthorized")
+                                .build();
+                throw new ServiceException(List.of(errorItem));
+            }
+        }
+        return getEmployerBankDetailsResponseDTO(
+                employerBankDetailDTO, bankAccountResponseDTO, employerGroupId);
+    }
+
+    public BankAccountDTO updateBankDetails(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO,
+            BankAccountDTO bankAccountDTO) {
+
+        List<ContributionBankAccountDTO> contributionBankAccounts =
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts();
+        for (ContributionBankAccountDTO contributionBankAccountDTO : contributionBankAccounts) {
+            bankAccountDTO.setBankName(contributionBankAccountDTO.getBankName());
+            bankAccountDTO.setNickName(contributionBankAccountDTO.getBankAccountNickName());
+            bankAccountDTO.setAccountNumber(
+                    contributionBankAccountDTO.getBankAccountIdentifier().getBankAccountNumber());
+            bankAccountDTO.setRoutingNumber(
+                    contributionBankAccountDTO.getBankAccountIdentifier().getBankRoutingNumber());
+            bankAccountDTO.setAccountStatus(
+                    contributionBankAccountDTO.getBankAccountStatus().getCodeName());
+            bankAccountDTO.setUsage(BankAccountConstants.HSA_FUNDING);
+            bankAccountDTO.setSource(BankAccountConstants.EUREKA);
+            bankAccountDTO.setCorrelationId("1234");
+            bankAccountDTO.setAccountType(
+                    contributionBankAccountDTO.getBankAccountTypeCode().getCode());
+            bankAccountDTO.setNickName(contributionBankAccountDTO.getBankAccountNickName());
+        }
+        return bankAccountDTO;
+    }
+
+    public EmployerBankDetailsResponseDTO getEmployerBankDetailsResponseDTO(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO,
+            BankAccountResponseDTO bankAccountResponseDTO,
+            String employerGroupId) {
+        var statusDTO = new StatusDTO();
+        try {
+            if (Objects.nonNull(bankAccountResponseDTO)
+                    && bankAccountResponseDTO
+                    .getStatus()
+                    .equalsIgnoreCase(BankAccountConstants.SUCCESS)
+                    && bankAccountResponseDTO.getData() > 0) {
+                var bankAccountResponse =
+                        bankAccountClient.getBankAccountInfoFromBankService(
+                                employerGroupId, bankAccountResponseDTO.getData());
+                log.info("Bank Account Response info: {}", bankAccountResponse);
+                if (Objects.nonNull(bankAccountResponse)
+                        && bankAccountResponse.getData() != null
+                        && bankAccountResponse
+                        .getStatus()
+                        .equalsIgnoreCase(BankAccountConstants.SUCCESS)) {
+                    var employerBankDetailDTO =
+                            EmployerContributionHelper.getEmployerBankDetailDTO(
+                                    bankAccountResponse.getData(), employerBankDetailsResponseDTO);
+                    employerBankDetailDTO.setEmployerGroupId(employerGroupId);
+                    employerBankDetailsResponseDTO.setEmployerBankDetail(employerBankDetailDTO);
+                    statusDTO = getStatusDTO();
+                    employerBankDetailsResponseDTO.setStatus(statusDTO);
+                } else {
+                    statusDTO = getFailureStatus();
+                    employerBankDetailsResponseDTO.setStatus(statusDTO);
+                }
+            } else {
+                statusDTO.setStatusCode("0002");
+                statusDTO.setSeverity("ERR");
+                statusDTO.setStatusDescription("Employer Not Found");
+                employerBankDetailsResponseDTO.setStatus(statusDTO);
+            }
+        } catch (Exception e) {
+            statusDTO = getFailureStatus();
+            employerBankDetailsResponseDTO.setStatus(statusDTO);
+        }
+        return employerBankDetailsResponseDTO;
+    }
+
+    private StatusDTO getStatusDTO() {
+        var statusDTO = new StatusDTO();
+        statusDTO.setStatusCode("0000");
+        statusDTO.setSeverity("INF");
+        statusDTO.setStatusDescription("REQUEST SUCCESSFULLY PROCESSED");
+        return statusDTO;
+    }
+
+    private StatusDTO getFailureStatus() {
+        var statusDTO = new StatusDTO();
+        statusDTO.setStatusCode("0002");
+        statusDTO.setSeverity("ERR");
+        statusDTO.setStatusDescription("Bank Account Not Found");
+        return statusDTO;
+    }
+}
