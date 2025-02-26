@@ -1,3 +1,37 @@
+===============success response=================
+{
+  "employerBankDetail": {
+    "employerGroupId": "GRP0016",
+    "contributionBankAccounts": [
+      {
+        "bankAccountIdentifier": {
+          "bankAccountNumber": "32325435435465456",
+          "bankRoutingNumber": "041215032"
+        },
+        "bankAccountTypeCode": {
+          "code": "C",
+          "codeName": "Checking"
+        },
+        "bankName": "PUNJAB NATIONAL BANK",
+        "bankSequenceNumber": "14",
+        "bankAccountNickName": "HUNTINGTON NATIONAL BANK 5456",
+        "bankAccountStatus": {
+          "code": "A",
+          "codeName": "Active"
+        },
+        "bankAccountOperation": "Update"
+      }
+    ]
+  },
+  "status": {
+    "statusCode": "0000",
+    "severity": "INF",
+    "statusDescription": "REQUEST SUCCESSFULLY PROCESSED"
+  },
+  "requestId": "-4123525199855273062",
+  "requestUserId": "prajula1",
+  "sourceSystemId": "4"
+}
 ====================request=================
 {
   "employerBankDetail": {
