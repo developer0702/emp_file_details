@@ -1,0 +1,64 @@
+====================request=================
+{
+  "employerBankDetail": {
+    "employerGroupId": "GRP0016",
+    "contributionBankAccounts": [
+      {
+        "bankAccountIdentifier": {
+          "bankAccountNumber": "",
+          "bankRoutingNumber": "041215032"
+        },
+        "bankAccountTypeCode": {
+          "code": "C",
+          "codeName": "Checking"
+        },
+        "bankName": "PUNJAB NATIONAL BANK",
+        "bankAccountStatus": {
+          "code": "A",
+          "codeName": "Active"
+        },
+        "bankSequenceNumber": "14",
+        "bankAccountNickName": "HUNTINGTON NATIONAL BANK 5456",
+        "bankAccountOperation": "Update"
+      }
+    ]
+  },
+  "requestId": "-4123525199855273062",
+  "requestUserId": "prajula1",
+  "sourceSystemId": "4"
+}
+
+=========response=========
+{
+  "employerBankDetail": {
+    "employerGroupId": "GRP0016",
+    "contributionBankAccounts": [
+      {
+        "bankAccountIdentifier": {
+          "bankAccountNumber": "",
+          "bankRoutingNumber": "041215032"
+        },
+        "bankAccountTypeCode": {
+          "code": "C",
+          "codeName": "Checking"
+        },
+        "bankName": "PUNJAB NATIONAL BANK",
+        "bankSequenceNumber": "14",
+        "bankAccountNickName": "HUNTINGTON NATIONAL BANK 5456",
+        "bankAccountStatus": {
+          "code": "A",
+          "codeName": "Active"
+        },
+        "bankAccountOperation": "Update"
+      }
+    ]
+  },
+  "status": {
+    "statusCode": "0002",
+    "severity": "ERR",
+    "statusDescription": "REQUIRED FIELDS MISSING"
+  },
+  "requestId": "-4123525199855273062",
+  "requestUserId": "prajula1",
+  "sourceSystemId": "4"
+}
