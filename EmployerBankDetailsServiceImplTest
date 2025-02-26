@@ -1,0 +1,141 @@
+package com.optum.ftps.ob.core.employer.details.service;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.optum.ftps.ob.core.employer.details.dto.*;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.*;
+import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
+import com.optum.ftps.ob.core.employer.details.repository.ServiceMessageTypeRepository;
+import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
+
+import com.optum.ftps.ob.core.employer.details.service.impl.EmployerBankDetailsServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+class EmployerBankDetailsServiceImplTest {
+
+    @Mock
+    private BankAccountClient bankAccountClient;
+
+    @Mock
+    private ServiceMessageTypeRepository messageTypeRepository;
+
+    @InjectMocks
+    private EmployerBankDetailsServiceImpl employerBankDetailsService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        when(messageTypeRepository.getStatusMessageType(0000))
+                .thenReturn(new StatusMessageType("0000", "INF", "REQUEST SUCCESSFULLY PROCESSED"));
+        when(messageTypeRepository.getStatusMessageType(2))
+                .thenReturn(new StatusMessageType("2", "ERR", "REQUEST FAILED"));
+    }
+
+    @Test
+    void updateEmployerBankDetails_validRequest_returnsResponse() throws ServiceException {
+        var requestDTO = createValidRequest();
+        var bankAccountResponse = createBankAccountResponse();
+        var bankAccountResponseDTO = createBankAccountResponseDTO();
+
+        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
+                .thenReturn(Mono.just(bankAccountResponse));
+        when(bankAccountClient.updateBankAccountResponse(any(), anyString(), anyLong()))
+                .thenReturn(bankAccountResponseDTO);
+
+        EmployerBankDetailsResponseDTO responseDTO =
+                employerBankDetailsService.updateEmployerBankDetails(requestDTO);
+
+        assertNotNull(responseDTO);
+        assertEquals("0000", responseDTO.getStatus().getStatusCode());
+        assertEquals("INF", responseDTO.getStatus().getSeverity());
+        assertEquals("REQUEST SUCCESSFULLY PROCESSED", responseDTO.getStatus().getStatusDescription());
+    }
+
+    @Test
+    void updateEmployerBankDetails_notFound_throwsServiceException() {
+        var requestDTO = createValidRequest();
+
+        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
+                .thenThrow(WebClientResponseException.create(500, "Internal Server Error", null, null, null));
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> {
+            employerBankDetailsService.updateEmployerBankDetails(requestDTO);
+        });
+
+        assertEquals("500", exception.getErrors().get(0).getStatusCode());
+        assertEquals("ERR", exception.getErrors().get(0).getSeverity());
+        assertEquals("Employer Not Found", exception.getErrors().get(0).getStatusDescription());
+    }
+
+    @Test
+    void updateEmployerBankDetails_unauthorized_throwsServiceException() {
+        var requestDTO = createValidRequest();
+
+        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
+                .thenThrow(WebClientResponseException.create(401, "Unauthorized", null, null, null));
+
+        ServiceException exception = assertThrows(ServiceException.class, () -> {
+            employerBankDetailsService.updateEmployerBankDetails(requestDTO);
+        });
+
+        assertEquals("401", exception.getErrors().get(0).getStatusCode());
+        assertEquals("ERR", exception.getErrors().get(0).getSeverity());
+        assertEquals("Unauthorized", exception.getErrors().get(0).getStatusDescription());
+    }
+
+    private EmployerBankDetailsResponseDTO createValidRequest() {
+        var requestDTO = new EmployerBankDetailsResponseDTO();
+        var employerBankDetail = new EmployerBankDetailDTO();
+        employerBankDetail.setEmployerGroupId("group123");
+
+        var contributionBankAccount = new ContributionBankAccountDTO();
+        contributionBankAccount.setBankSequenceNumber("1");
+        contributionBankAccount.setBankName("Test Bank");
+        contributionBankAccount.setBankAccountNickName("Test Account");
+        var bankAccountIdentifier = new BankAccountIdentifierDTO();
+        bankAccountIdentifier.setBankAccountNumber("1234567890");
+        bankAccountIdentifier.setBankRoutingNumber("987654321");
+        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
+        var bankAccountStatus = new BankAccountStatusDTO();
+        bankAccountStatus.setCodeName("Active");
+        contributionBankAccount.setBankAccountStatus(bankAccountStatus);
+        var bankAccountTypeCode = new BankAccountTypeCodeDTO();
+        bankAccountTypeCode.setCode("S");
+        contributionBankAccount.setBankAccountTypeCode(bankAccountTypeCode);
+
+        employerBankDetail.setContributionBankAccounts(List.of(contributionBankAccount));
+        requestDTO.setEmployerBankDetail(employerBankDetail);
+        return requestDTO;
+    }
+
+    private BankAccountResponse createBankAccountResponse() {
+        var bankAccountResponse = new BankAccountResponse();
+        var bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setId(1L);
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setNickName("Test Account");
+        bankAccountDTO.setAccountNumber("1234567890");
+        bankAccountDTO.setRoutingNumber("987654321");
+        bankAccountDTO.setAccountStatus("Active");
+        bankAccountDTO.setAccountType("S");
+        bankAccountResponse.setData(bankAccountDTO);
+        bankAccountResponse.setStatus("SUCCESS");
+        return bankAccountResponse;
+    }
+
+    private BankAccountResponseDTO createBankAccountResponseDTO() {
+        var bankAccountResponseDTO = new BankAccountResponseDTO();
+        bankAccountResponseDTO.setStatus("SUCCESS");
+        bankAccountResponseDTO.setData(1L);
+        return bankAccountResponseDTO;
+    }
+}
