@@ -7,9 +7,11 @@ import com.optum.ftps.ob.core.employer.details.dto.*;
 import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
 import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
 import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ClientWebClientResponseException;
 import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
 import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
 
+import com.optum.ftps.ob.core.employer.details.repository.ServiceMessageTypeRepository;
 import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
 import com.optum.ftps.ob.core.employer.details.resolver.EmployerContributionHelper;
 import com.optum.ftps.ob.core.employer.details.service.EmployerBankDetailsService;
@@ -29,6 +31,7 @@ import java.util.*;
 public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsService {
 
     private final BankAccountClient bankAccountClient;
+    private final ServiceMessageTypeRepository messageTypeRepository;
 
     @Override
     public EmployerBankDetailsResponseDTO updateEmployerBankDetails(
@@ -56,6 +59,7 @@ public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsServic
                     bankAccountClient.updateBankAccountResponse(bankAccountDTO, employerGroupId, bankAccountDTO.getId());
         } catch (WebClientResponseException e) {
             log.info("Status code: {}", e.getStatusCode());
+
             if (e.getStatusCode().value() == 500) {
                 var errorItem =
                         ErrorItem.builder()
@@ -111,6 +115,7 @@ public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsServic
             String employerGroupId) {
         var statusDTO = new StatusDTO();
         try {
+           
             if (Objects.nonNull(bankAccountResponseDTO)
                     && bankAccountResponseDTO
                     .getStatus()
@@ -120,6 +125,7 @@ public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsServic
                         bankAccountClient.getBankAccountInfoFromBankService(
                                 employerGroupId, bankAccountResponseDTO.getData());
                 log.info("Bank Account Response info: {}", bankAccountResponse);
+
                 if (Objects.nonNull(bankAccountResponse)
                         && bankAccountResponse.getData() != null
                         && bankAccountResponse
@@ -130,38 +136,48 @@ public class EmployerBankDetailsServiceImpl implements EmployerBankDetailsServic
                                     bankAccountResponse.getData(), employerBankDetailsResponseDTO);
                     employerBankDetailDTO.setEmployerGroupId(employerGroupId);
                     employerBankDetailsResponseDTO.setEmployerBankDetail(employerBankDetailDTO);
-                    statusDTO = getStatusDTO();
+                    StatusMessageType messageType = messageTypeRepository.getStatusMessageType(0000);
+
+                    statusDTO = getStatusDTO("0000", messageType.getSeverity(), messageType.getStatusDescription());
                     employerBankDetailsResponseDTO.setStatus(statusDTO);
+                    return employerBankDetailsResponseDTO;
                 } else {
-                    statusDTO = getFailureStatus();
+                    StatusMessageType messageType = messageTypeRepository.getStatusMessageType(0002);
+                    statusDTO = getFailureStatus("0002", messageType.getSeverity(), messageType.getStatusDescription());
                     employerBankDetailsResponseDTO.setStatus(statusDTO);
                 }
             } else {
-                statusDTO.setStatusCode("0002");
-                statusDTO.setSeverity("ERR");
-                statusDTO.setStatusDescription("Employer Not Found");
+
+                StatusMessageType messageType = messageTypeRepository.getStatusMessageType(0002);
+
+                statusDTO = getFailureStatus("0002", messageType.getSeverity(), messageType.getStatusDescription());
+
                 employerBankDetailsResponseDTO.setStatus(statusDTO);
             }
         } catch (Exception e) {
-            statusDTO = getFailureStatus();
+
+           StatusMessageType messageType = messageTypeRepository.getStatusMessageType(0002);
+
+            statusDTO = getFailureStatus("0002", messageType.getSeverity(), messageType.getStatusDescription());
             employerBankDetailsResponseDTO.setStatus(statusDTO);
         }
         return employerBankDetailsResponseDTO;
     }
 
-    private StatusDTO getStatusDTO() {
+    private StatusDTO getStatusDTO(String statusCode, String severity, String statusDescription) {
         var statusDTO = new StatusDTO();
-        statusDTO.setStatusCode("0000");
-        statusDTO.setSeverity("INF");
-        statusDTO.setStatusDescription("REQUEST SUCCESSFULLY PROCESSED");
+        statusDTO.setStatusCode(statusCode);
+        statusDTO.setSeverity(severity);
+        statusDTO.setStatusDescription(statusDescription);
         return statusDTO;
     }
 
-    private StatusDTO getFailureStatus() {
+    private StatusDTO getFailureStatus(String statusCode, String severity, String statusDescription) {
         var statusDTO = new StatusDTO();
-        statusDTO.setStatusCode("0002");
-        statusDTO.setSeverity("ERR");
-        statusDTO.setStatusDescription("Bank Account Not Found");
+        statusDTO.setStatusCode(statusCode);
+        System.out.println("status code"+statusCode);
+        statusDTO.setSeverity(severity);
+        statusDTO.setStatusDescription(statusDescription);
         return statusDTO;
     }
 }
