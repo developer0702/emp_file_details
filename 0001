@@ -1,8 +1,3 @@
-package com.optum.ftps.ob.core.employer.details.resolver;
-
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -10,6 +5,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.http.HttpStatus;
 import reactor.core.publisher.Mono;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,7 +18,10 @@ class BankAccountClientTest {
     private WebClient employerWebClient;
 
     @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
     private WebClient.RequestHeadersSpec requestHeadersSpec;
@@ -39,78 +38,6 @@ class BankAccountClientTest {
     }
 
     @Test
-    void testUpdateBankAccountResponse_Success() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
-        responseDTO.setStatus("Success");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(responseDTO));
-
-        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "EMP123", 1L);
-
-        assertNotNull(result);
-        assertEquals("Success", result.getStatus());
-    }
-
-    @Test
-    void testUpdateBankAccountResponse_NotFound() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
-                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", 404, "Not Found", null, null, null)));
-
-        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "EMP123", 1L);
-
-        assertNull(result);
-    }
-
-    @Test
-    void testGetBankAccountInfoFromBankService_Success() {
-        BankAccountResponse response = new BankAccountResponse();
-        response.setStatus("Success");
-
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(response));
-
-        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService("EMP123", 1L);
-
-        assertNotNull(result);
-        assertEquals("Success", result.getStatus());
-    }
-
-    @Test
-    void testGetBankAccountInfoFromBankService_NotFound() {
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class))
-                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", 404, "Not Found", null, null, null)));
-
-        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService("EMP123", 1L);
-
-        assertNull(result);
-    }
-
-    @Test
     void testCallUpdateBankAccountApi_Success() {
         BankAccountDTO bankAccountDTO = new BankAccountDTO();
         bankAccountDTO.setBankName("Test Bank");
@@ -121,16 +48,52 @@ class BankAccountClientTest {
         BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
         responseDTO.setStatus("Success");
 
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
+        // Mock the WebClient chain
+        when(employerWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString(), any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(), any())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(responseDTO));
 
+        // Call the method under test
         Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "EMP123", 1L);
 
+        // Verify the result
         assertNotNull(result);
         assertEquals("Success", result.block().getStatus());
+    }
+
+    @Test
+    void testCallUpdateBankAccountApi_NotFound() {
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("987654321");
+        bankAccountDTO.setAccountType("Savings");
+
+        // Simulate a 404 Not Found error
+        WebClientResponseException notFoundException = WebClientResponseException.create(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                null, // headers
+                null, // response body as byte array
+                null  // charset
+        );
+
+        // Mock the WebClient chain
+        when(employerWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString(), any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+                .thenReturn(Mono.error(notFoundException));
+
+        // Call the method under test
+        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "EMP123", 1L);
+
+        // Verify that the result is an empty Mono
+        assertNotNull(result);
+        assertNull(result.block()); // block() resolves the Mono and returns null for empty Mono
     }
 
     @Test
@@ -138,14 +101,43 @@ class BankAccountClientTest {
         BankAccountResponse response = new BankAccountResponse();
         response.setStatus("Success");
 
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        // Mock the WebClient chain
+        when(employerWebClient.get()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString(), any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(response));
 
+        // Call the method under test
         Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfoApi("EMP123", 1L);
 
+        // Verify the result
         assertNotNull(result);
         assertEquals("Success", result.block().getStatus());
+    }
+
+    @Test
+    void testCallGetBankAccountInfoApi_NotFound() {
+        // Simulate a 404 Not Found error
+        WebClientResponseException notFoundException = WebClientResponseException.create(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                null, // headers
+                null, // response body as byte array
+                null  // charset
+        );
+
+        // Mock the WebClient chain
+        when(employerWebClient.get()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString(), any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(notFoundException));
+
+        // Call the method under test
+        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfoApi("EMP123", 1L);
+
+        // Verify that the result is an empty Mono
+        assertNotNull(result);
+        assertNull(result.block()); // block() resolves the Mono and returns null for empty Mono
     }
 }
