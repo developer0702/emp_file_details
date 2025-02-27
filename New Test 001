@@ -26,7 +26,7 @@ class BankAccountClientTest {
     @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
     @Mock
     private WebClient.RequestBodySpec requestBodySpec;
     @Mock
@@ -65,12 +65,12 @@ class BankAccountClientTest {
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(bankAccountResponseDTO));
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(bankAccountResponse));
     }
 
     @Test
     void testUpdateBankAccountResponse_Success() {
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(bankAccountResponseDTO));
-
         BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, employerGroupId, accountId);
         assertNotNull(result);
     }
@@ -80,17 +80,12 @@ class BankAccountClientTest {
         when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
                 .thenReturn(Mono.error(new WebClientResponseException(404, "Not Found", null, null, null)));
 
-        Optional<BankAccountResponseDTO> result = 
-                bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, employerGroupId, accountId)
-                        .blockOptional();
-
-        assertTrue(result.isEmpty());
+        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, employerGroupId, accountId);
+        assertThrows(WebClientResponseException.class, result::block);
     }
 
     @Test
     void testGetBankAccountInfoFromBankService_Success() {
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(bankAccountResponse));
-
         BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService(employerGroupId, accountId);
         assertNotNull(result);
         assertEquals("SUCCESS", result.getStatus());
@@ -102,10 +97,7 @@ class BankAccountClientTest {
         when(responseSpec.bodyToMono(BankAccountResponse.class))
                 .thenReturn(Mono.error(new WebClientResponseException(404, "Not Found", null, null, null)));
 
-        Optional<BankAccountResponse> result = 
-                bankAccountClient.callGetBankAccountInfoApi(employerGroupId, accountId)
-                        .blockOptional();
-
-        assertTrue(result.isEmpty());
+        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfoApi(employerGroupId, accountId);
+        assertThrows(WebClientResponseException.class, result::block);
     }
 }
