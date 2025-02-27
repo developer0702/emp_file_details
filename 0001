@@ -1,158 +1,93 @@
-package com.optum.ftps.ob.core.employer.details.service;
+package com.optum.ftps.ob.core.employer.details.resolver;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.optum.ftps.ob.core.employer.details.dto.*;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.*;
-import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
-import com.optum.ftps.ob.core.employer.details.repository.ServiceMessageTypeRepository;
-import com.optum.ftps.ob.core.employer.details.resolver.BankAccountClient;
-
-import com.optum.ftps.ob.core.employer.details.service.impl.EmployerBankDetailsServiceImpl;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
 
-import java.util.List;
+import java.util.Collections;
 
-class EmployerBankDetailsServiceImplTest {
+class EmployerContributionHelperTest {
 
     @Mock
-    private BankAccountClient bankAccountClient;
+    private BankAccountDTO bankAccountDTO;
 
     @Mock
-    private ServiceMessageTypeRepository messageTypeRepository;
+    private EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO;
 
-    @InjectMocks
-    private EmployerBankDetailsServiceImpl employerBankDetailsService;
+    @Mock
+    private EmployerBankDetailDTO employerBankDetailDTO;
+
+    @Mock
+    private ContributionBankAccountDTO contributionBankAccountDTO;
+
+    @Mock
+    private BankAccountTypeCodeDTO bankAccountTypeCodeDTO;
+
+    @Mock
+    private BankAccountStatusDTO bankAccountStatusDTO;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(messageTypeRepository.getStatusMessageType(0000))
-                .thenReturn(new StatusMessageType("0000", "INF", "REQUEST SUCCESSFULLY PROCESSED"));
-        when(messageTypeRepository.getStatusMessageType(0002))
-                .thenReturn(new StatusMessageType("0002", "ERR", "REQUIRED FIELDS MISSING"));
+
+        when(bankAccountDTO.getNickName()).thenReturn("Test Nickname");
+        when(bankAccountDTO.getBankName()).thenReturn("Test Bank");
+        when(bankAccountDTO.getId()).thenReturn(123L);
+        when(bankAccountDTO.getAccountNumber()).thenReturn("123456789");
+        when(bankAccountDTO.getRoutingNumber()).thenReturn("987654321");
+        when(bankAccountDTO.getAccountStatus()).thenReturn("Active");
+        when(bankAccountDTO.getAccountType()).thenReturn("Checking");
+
+        when(employerBankDetailsResponseDTO.getEmployerBankDetail()).thenReturn(employerBankDetailDTO);
+        when(employerBankDetailDTO.getContributionBankAccounts()).thenReturn(Collections.singletonList(contributionBankAccountDTO));
+        when(contributionBankAccountDTO.getBankAccountTypeCode()).thenReturn(bankAccountTypeCodeDTO);
+        when(contributionBankAccountDTO.getBankAccountStatus()).thenReturn(bankAccountStatusDTO);
+        when(bankAccountTypeCodeDTO.getCodeName()).thenReturn("Checking");
+        when(bankAccountStatusDTO.getCode()).thenReturn("Active");
     }
 
     @Test
-    void updateEmployerBankDetails_validRequest_returnsResponse() throws ServiceException {
-        var requestDTO = createValidRequest();
-        var bankAccountResponse = createBankAccountResponse();
-        var bankAccountResponseDTO = createBankAccountResponseDTO();
-
-        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
-                .thenReturn(Mono.just(bankAccountResponse));
-        when(bankAccountClient.updateBankAccountResponse(any(), anyString(), anyLong()))
-                .thenReturn(bankAccountResponseDTO);
-
-        EmployerBankDetailsResponseDTO responseDTO =
-                employerBankDetailsService.updateEmployerBankDetails(requestDTO);
-
-        assertNotNull(responseDTO);
-        assertEquals("0000", responseDTO.getStatus().getStatusCode());
-        assertEquals("INF", responseDTO.getStatus().getSeverity());
-        assertEquals("REQUEST SUCCESSFULLY PROCESSED", responseDTO.getStatus().getStatusDescription());
+    void testGetEmployerBankDetailDTO() {
+        EmployerBankDetailDTO result = EmployerContributionHelper.getEmployerBankDetailDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+        assertNotNull(result);
+        assertEquals(1, result.getContributionBankAccounts().size());
     }
 
     @Test
-    void updateEmployerBankDetails_notFound_throwsServiceException() {
-        var requestDTO = createValidRequest();
-
-        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
-                .thenThrow(WebClientResponseException.create(500, "Internal Server Error", null, null, null));
-
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            employerBankDetailsService.updateEmployerBankDetails(requestDTO);
-        });
-
-        assertEquals("500", exception.getErrors().get(0).getStatusCode());
-        assertEquals("ERR", exception.getErrors().get(0).getSeverity());
-        assertEquals("Employer Not Found", exception.getErrors().get(0).getStatusDescription());
+    void testCreateContributionBankAccountDTO() {
+        ContributionBankAccountDTO result = EmployerContributionHelper.createContributionBankAccountDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+        assertNotNull(result);
+        assertEquals("Test Bank", result.getBankName());
+        assertEquals("Test Nickname", result.getBankAccountNickName());
     }
 
     @Test
-    void updateEmployerBankDetails_unauthorized_throwsServiceException() {
-        var requestDTO = createValidRequest();
-
-        when(bankAccountClient.callGetBankAccountInfoApi(anyString(), anyLong()))
-                .thenThrow(WebClientResponseException.create(401, "Unauthorized", null, null, null));
-
-        ServiceException exception = assertThrows(ServiceException.class, () -> {
-            employerBankDetailsService.updateEmployerBankDetails(requestDTO);
-        });
-
-        assertEquals("401", exception.getErrors().get(0).getStatusCode());
-        assertEquals("ERR", exception.getErrors().get(0).getSeverity());
-        assertEquals("Unauthorized", exception.getErrors().get(0).getStatusDescription());
+    void testCreateBankAccountIdentifierDTO() {
+        BankAccountIdentifierDTO result = EmployerContributionHelper.createBankAccountIdentifierDTO(bankAccountDTO);
+        assertNotNull(result);
+        assertEquals("123456789", result.getBankAccountNumber());
+        assertEquals("987654321", result.getBankRoutingNumber());
     }
 
-    private EmployerBankDetailsResponseDTO createValidRequest() {
-        var requestDTO = new EmployerBankDetailsResponseDTO();
-        var employerBankDetail = new EmployerBankDetailDTO();
-        employerBankDetail.setEmployerGroupId("GRP0016");
-
-        var contributionBankAccount = new ContributionBankAccountDTO();
-        contributionBankAccount.setBankSequenceNumber("14");
-        contributionBankAccount.setBankName("PUNJAB NATIONAL BANK");
-        contributionBankAccount.setBankAccountNickName("HUNTINGTON NATIONAL BANK 5456");
-        var bankAccountIdentifier = new BankAccountIdentifierDTO();
-        bankAccountIdentifier.setBankAccountNumber("32325435435465456");
-        bankAccountIdentifier.setBankRoutingNumber("041215032");
-        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
-        var bankAccountStatus = new BankAccountStatusDTO();
-        bankAccountStatus.setCode("A");
-        bankAccountStatus.setCodeName("Active");
-        contributionBankAccount.setBankAccountStatus(bankAccountStatus);
-        var bankAccountTypeCode = new BankAccountTypeCodeDTO();
-        bankAccountTypeCode.setCode("C");
-        bankAccountTypeCode.setCodeName("Checking");
-        contributionBankAccount.setBankAccountTypeCode(bankAccountTypeCode);
-        contributionBankAccount.setBankAccountOperation("Update");
-
-        employerBankDetail.setContributionBankAccounts(List.of(contributionBankAccount));
-        requestDTO.setEmployerBankDetail(employerBankDetail);
-
-        var status = new StatusDTO();
-        status.setStatusCode("0000");
-        status.setSeverity("INF");
-        status.setStatusDescription("REQUEST SUCCESSFULLY PROCESSED");
-        requestDTO.setStatus(status);
-
-        requestDTO.setRequestId("-4123525199855273062");
-        requestDTO.setRequestUserId("prajula1");
-        requestDTO.setSourceSystemId("4");
-
-        return requestDTO;
+    @Test
+    void testCreateBankAccountTypeCodeDTO() {
+        BankAccountTypeCodeDTO result = EmployerContributionHelper.createBankAccountTypeCodeDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+        assertNotNull(result);
+        assertEquals("Checking", result.getCode());
+        assertEquals("Checking", result.getCodeName());
     }
 
-    private EmployerBankDetailsResponseDTO createValidRequestFailure() {
-        var requestDTO = new EmployerBankDetailsResponseDTO();
-        var employerBankDetail = new EmployerBankDetailDTO();
-        employerBankDetail.setEmployerGroupId("group123");
-
-        var contributionBankAccount = new ContributionBankAccountDTO();
-        contributionBankAccount.setBankSequenceNumber("1");
-        contributionBankAccount.setBankName("Test Bank");
-        contributionBankAccount.setBankAccountNickName("Test Account");
-        var bankAccountIdentifier = new BankAccountIdentifierDTO();
-        bankAccountIdentifier.setBankAccountNumber("1234567890");
-        bankAccountIdentifier.setBankRoutingNumber("987654321");
-        contributionBankAccount.setBankAccountIdentifier(bankAccountIdentifier);
-        var bankAccountStatus = new BankAccountStatusDTO();
-        bankAccountStatus.setCodeName("Active");
-        contributionBankAccount.setBankAccountStatus(bankAccountStatus);
-        var bankAccountTypeCode = new BankAccountTypeCodeDTO();
-        bankAccountTypeCode.setCode("S");
-        contributionBankAccount.setBankAccountTypeCode(bankAccountTypeCode);
-
-        employerBankDetail.setContributionBankAccounts(List.of(contributionBankAccount));
-        requestDTO.setEmployerBankDetail(employerBankDetail);
-        return requestDTO;
+    @Test
+    void testCreateBankAccountStatusDTO() {
+        BankAccountStatusDTO result = EmployerContributionHelper.createBankAccountStatusDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+        assertNotNull(result);
+        assertEquals("Active", result.getCodeName());
+        assertEquals("Active", result.getCode());
     }
 }
