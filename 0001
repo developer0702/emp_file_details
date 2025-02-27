@@ -1,93 +1,151 @@
 package com.optum.ftps.ob.core.employer.details.resolver;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import com.optum.ftps.ob.core.employer.details.dto.*;
 import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
-import java.util.Collections;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-class EmployerContributionHelperTest {
-
-    @Mock
-    private BankAccountDTO bankAccountDTO;
-
-    @Mock
-    private EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO;
-
-    @Mock
-    private EmployerBankDetailDTO employerBankDetailDTO;
+class BankAccountClientTest {
 
     @Mock
-    private ContributionBankAccountDTO contributionBankAccountDTO;
+    private WebClient employerWebClient;
 
     @Mock
-    private BankAccountTypeCodeDTO bankAccountTypeCodeDTO;
+    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
 
     @Mock
-    private BankAccountStatusDTO bankAccountStatusDTO;
+    private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks
+    private BankAccountClient bankAccountClient;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-
-        when(bankAccountDTO.getNickName()).thenReturn("Test Nickname");
-        when(bankAccountDTO.getBankName()).thenReturn("Test Bank");
-        when(bankAccountDTO.getId()).thenReturn(123L);
-        when(bankAccountDTO.getAccountNumber()).thenReturn("123456789");
-        when(bankAccountDTO.getRoutingNumber()).thenReturn("987654321");
-        when(bankAccountDTO.getAccountStatus()).thenReturn("Active");
-        when(bankAccountDTO.getAccountType()).thenReturn("Checking");
-
-        when(employerBankDetailsResponseDTO.getEmployerBankDetail()).thenReturn(employerBankDetailDTO);
-        when(employerBankDetailDTO.getContributionBankAccounts()).thenReturn(Collections.singletonList(contributionBankAccountDTO));
-        when(contributionBankAccountDTO.getBankAccountTypeCode()).thenReturn(bankAccountTypeCodeDTO);
-        when(contributionBankAccountDTO.getBankAccountStatus()).thenReturn(bankAccountStatusDTO);
-        when(bankAccountTypeCodeDTO.getCodeName()).thenReturn("Checking");
-        when(bankAccountStatusDTO.getCode()).thenReturn("Active");
     }
 
     @Test
-    void testGetEmployerBankDetailDTO() {
-        EmployerBankDetailDTO result = EmployerContributionHelper.getEmployerBankDetailDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+    void testUpdateBankAccountResponse_Success() {
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("987654321");
+        bankAccountDTO.setAccountType("Savings");
+
+        BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
+        responseDTO.setStatus("Success");
+
+        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(responseDTO));
+
+        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "EMP123", 1L);
+
         assertNotNull(result);
-        assertEquals(1, result.getContributionBankAccounts().size());
+        assertEquals("Success", result.getStatus());
     }
 
     @Test
-    void testCreateContributionBankAccountDTO() {
-        ContributionBankAccountDTO result = EmployerContributionHelper.createContributionBankAccountDTO(bankAccountDTO, employerBankDetailsResponseDTO);
-        assertNotNull(result);
-        assertEquals("Test Bank", result.getBankName());
-        assertEquals("Test Nickname", result.getBankAccountNickName());
+    void testUpdateBankAccountResponse_NotFound() {
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("987654321");
+        bankAccountDTO.setAccountType("Savings");
+
+        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", 404, "Not Found", null, null, null)));
+
+        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "EMP123", 1L);
+
+        assertNull(result);
     }
 
     @Test
-    void testCreateBankAccountIdentifierDTO() {
-        BankAccountIdentifierDTO result = EmployerContributionHelper.createBankAccountIdentifierDTO(bankAccountDTO);
+    void testGetBankAccountInfoFromBankService_Success() {
+        BankAccountResponse response = new BankAccountResponse();
+        response.setStatus("Success");
+
+        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(response));
+
+        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService("EMP123", 1L);
+
         assertNotNull(result);
-        assertEquals("123456789", result.getBankAccountNumber());
-        assertEquals("987654321", result.getBankRoutingNumber());
+        assertEquals("Success", result.getStatus());
     }
 
     @Test
-    void testCreateBankAccountTypeCodeDTO() {
-        BankAccountTypeCodeDTO result = EmployerContributionHelper.createBankAccountTypeCodeDTO(bankAccountDTO, employerBankDetailsResponseDTO);
-        assertNotNull(result);
-        assertEquals("Checking", result.getCode());
-        assertEquals("Checking", result.getCodeName());
+    void testGetBankAccountInfoFromBankService_NotFound() {
+        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", 404, "Not Found", null, null, null)));
+
+        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService("EMP123", 1L);
+
+        assertNull(result);
     }
 
     @Test
-    void testCreateBankAccountStatusDTO() {
-        BankAccountStatusDTO result = EmployerContributionHelper.createBankAccountStatusDTO(bankAccountDTO, employerBankDetailsResponseDTO);
+    void testCallUpdateBankAccountApi_Success() {
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("987654321");
+        bankAccountDTO.setAccountType("Savings");
+
+        BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
+        responseDTO.setStatus("Success");
+
+        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(responseDTO));
+
+        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "EMP123", 1L);
+
         assertNotNull(result);
-        assertEquals("Active", result.getCodeName());
-        assertEquals("Active", result.getCode());
+        assertEquals("Success", result.block().getStatus());
+    }
+
+    @Test
+    void testCallGetBankAccountInfoApi_Success() {
+        BankAccountResponse response = new BankAccountResponse();
+        response.setStatus("Success");
+
+        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(response));
+
+        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfoApi("EMP123", 1L);
+
+        assertNotNull(result);
+        assertEquals("Success", result.block().getStatus());
     }
 }
