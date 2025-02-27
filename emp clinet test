@@ -1,0 +1,206 @@
+=========================
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import com.optum.ftps.ob.core.employer.details.constants.BankAccountConstants;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountIdentifierDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountStatusDTO;
+import com.optum.ftps.ob.core.employer.details.dto.BankAccountTypeCodeDTO;
+import com.optum.ftps.ob.core.employer.details.dto.ContributionBankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailDTO;
+import com.optum.ftps.ob.core.employer.details.dto.EmployerBankDetailsResponseDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+
+import java.util.List;
+
+public class EmployerContributionHelper {
+
+    private EmployerContributionHelper() {
+        // Private constructor to hide the implicit public one
+    }
+
+    public static EmployerBankDetailDTO getEmployerBankDetailDTO(
+            BankAccountDTO bankAccountResponse,
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var contributionBankAccountDTO =
+                createContributionBankAccountDTO(
+                        bankAccountResponse, employerBankDetailsResponseDTO);
+        var contributionBankAccounts = List.of(contributionBankAccountDTO);
+        var employerBankDetailDTO = new EmployerBankDetailDTO();
+        employerBankDetailDTO.setContributionBankAccounts(contributionBankAccounts);
+        return employerBankDetailDTO;
+    }
+
+    public static ContributionBankAccountDTO createContributionBankAccountDTO(
+            BankAccountDTO bankAccountResponse,
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var contributionBankAccountDTO = new ContributionBankAccountDTO();
+        contributionBankAccountDTO.setBankAccountIdentifier(
+                createBankAccountIdentifierDTO(bankAccountResponse));
+        contributionBankAccountDTO.setBankAccountNickName(bankAccountResponse.getNickName());
+        contributionBankAccountDTO.setBankName(bankAccountResponse.getBankName());
+        contributionBankAccountDTO.setBankSequenceNumber(
+                bankAccountResponse.getId() != null
+                        ? String.valueOf(bankAccountResponse.getId())
+                        : null);
+        contributionBankAccountDTO.setBankAccountTypeCode(
+                createBankAccountTypeCodeDTO(bankAccountResponse, employerBankDetailsResponseDTO));
+        contributionBankAccountDTO.setBankAccountStatus(
+                createBankAccountStatusDTO(bankAccountResponse, employerBankDetailsResponseDTO));
+        contributionBankAccountDTO.setBankAccountOperation(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .get(0)
+                        .getBankAccountOperation());
+        return contributionBankAccountDTO;
+    }
+
+    public static BankAccountIdentifierDTO createBankAccountIdentifierDTO(
+            BankAccountDTO bankAccountResponse) {
+        var bankAccountIdentifierDTO = new BankAccountIdentifierDTO();
+        bankAccountIdentifierDTO.setBankAccountNumber(bankAccountResponse.getAccountNumber());
+        bankAccountIdentifierDTO.setBankRoutingNumber(bankAccountResponse.getRoutingNumber());
+        return bankAccountIdentifierDTO;
+    }
+
+    public static BankAccountTypeCodeDTO createBankAccountTypeCodeDTO(
+            BankAccountDTO bankAccountResponse,
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var bankAccountTypeCode = new BankAccountTypeCodeDTO();
+        bankAccountTypeCode.setCode(bankAccountResponse.getAccountType());
+        bankAccountTypeCode.setCodeName(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .get(0)
+                        .getBankAccountTypeCode()
+                        .getCodeName());
+        return bankAccountTypeCode;
+    }
+
+    public static BankAccountStatusDTO createBankAccountStatusDTO(
+            BankAccountDTO bankAccountResponse,
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var bankAccountStatus = new BankAccountStatusDTO();
+        bankAccountStatus.setCodeName(bankAccountResponse.getAccountStatus());
+        bankAccountStatus.setCode(
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts()
+                        .get(0)
+                        .getBankAccountStatus()
+                        .getCode());
+        return bankAccountStatus;
+    }
+
+    public static BankAccountDTO createBankData(
+            EmployerBankDetailsResponseDTO employerBankDetailsResponseDTO) {
+        var bankAccountDTO = new BankAccountDTO();
+        List<ContributionBankAccountDTO> contributionBankAccounts =
+                employerBankDetailsResponseDTO
+                        .getEmployerBankDetail()
+                        .getContributionBankAccounts();
+        contributionBankAccounts.forEach(
+                contributionBankAccountDTO -> {
+                    bankAccountDTO.setBankName(contributionBankAccountDTO.getBankName());
+                    bankAccountDTO.setBankName(contributionBankAccountDTO.getBankAccountNickName());
+                    bankAccountDTO.setAccountNumber(
+                            contributionBankAccountDTO
+                                    .getBankAccountIdentifier()
+                                    .getBankAccountNumber());
+                    bankAccountDTO.setRoutingNumber(
+                            contributionBankAccountDTO
+                                    .getBankAccountIdentifier()
+                                    .getBankRoutingNumber());
+                    bankAccountDTO.setAccountStatus(
+                            contributionBankAccountDTO.getBankAccountStatus().getCodeName());
+                    bankAccountDTO.setUsage(BankAccountConstants.HSA_FUNDING);
+                    bankAccountDTO.setSource(BankAccountConstants.EUREKA);
+                    bankAccountDTO.setCorrelationId("1234");
+                    bankAccountDTO.setAccountType(
+                            contributionBankAccountDTO.getBankAccountTypeCode().getCode());
+                    bankAccountDTO.setNickName(contributionBankAccountDTO.getBankAccountNickName());
+                });
+        return bankAccountDTO;
+    }
+}
+======================================
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import reactor.core.publisher.Mono;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class BankAccountClient {
+
+    private static final String GET_SPECIFIC_BANK_ACCOUNT_API =
+            "/employer/{employerGroupId}/bank-account/{id}";
+    private static final String UPDATE_SPECIFIC_BANK_ACCOUNT_API =
+            "/employer/{employerGroupId}/bank-account/{id}";
+
+    private final WebClient employerWebClient;
+
+    public BankAccountResponseDTO updateBankAccountResponse(
+            BankAccountDTO bankAccountDTO, String employerGroupId, Long id) {
+
+        return callUpdateBankAccountApi(bankAccountDTO, employerGroupId, id).block();
+    }
+
+    public BankAccountResponse getBankAccountInfoFromBankService(String employerGroupId, Long id) {
+        return callGetBankAccountInfoApi(employerGroupId, id).block();
+    }
+
+    public Mono<BankAccountResponseDTO> callUpdateBankAccountApi(
+            BankAccountDTO bankAccountDTO, String employerGroupId, Long id) {
+        Mono<BankAccountResponseDTO> bankAccountResponseDTO = null;
+        bankAccountResponseDTO =
+                employerWebClient
+                        .post()
+                        .uri(
+                                uriBuilder ->
+                                        uriBuilder
+                                                .path(UPDATE_SPECIFIC_BANK_ACCOUNT_API)
+                                                .build(employerGroupId, id))
+                        .body(Mono.just(bankAccountDTO), BankAccountDTO.class)
+                        .retrieve()
+                        .bodyToMono(BankAccountResponseDTO.class)
+                        .onErrorResume(
+                                WebClientResponseException.NotFound.class,
+                                e -> {
+                                    log.error("404  Found: {}", e.getMessage());
+                                    return Mono.empty();
+                                });
+        return bankAccountResponseDTO;
+    }
+
+    public Mono<BankAccountResponse> callGetBankAccountInfoApi(String employerGroupId, Long id) {
+
+        return employerWebClient
+                .get()
+                .uri(
+                        uriBuilder ->
+                                uriBuilder
+                                        .path(GET_SPECIFIC_BANK_ACCOUNT_API)
+                                        .build(employerGroupId, id))
+                .retrieve()
+                .bodyToMono(BankAccountResponse.class)
+                .onErrorResume(
+                        WebClientResponseException.NotFound.class,
+                        e -> {
+                            log.error("404 Not Found: {}", e.getMessage());
+                            return Mono.empty();
+                        });
+    }
+}
