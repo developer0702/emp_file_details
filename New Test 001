@@ -1,0 +1,104 @@
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.time.LocalDateTime;
+
+@ExtendWith(MockitoExtension.class)
+class BankAccountClientTest {
+
+    @Mock
+    private WebClient employerWebClient;
+    @Mock
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+    @Mock
+    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks
+    private BankAccountClient bankAccountClient;
+
+    private final String employerGroupId = "1234";
+    private final Long accountId = 5678L;
+    private final BankAccountDTO bankAccountDTO = new BankAccountDTO();
+    private final BankAccountResponseDTO bankAccountResponseDTO = new BankAccountResponseDTO();
+    private final BankAccountResponse bankAccountResponse = new BankAccountResponse();
+
+    @BeforeEach
+    void setup() {
+        bankAccountDTO.setId(accountId);
+        bankAccountDTO.setEmployerId(9876L);
+        bankAccountDTO.setUsage("Business");
+        bankAccountDTO.setBankName("Test Bank");
+        bankAccountDTO.setRoutingNumber("123456789");
+        bankAccountDTO.setAccountNumber("987654321");
+        bankAccountDTO.setAccountType("Checking");
+        bankAccountDTO.setNickName("My Business Account");
+        bankAccountDTO.setAccountStatus("Active");
+        bankAccountDTO.setStartDate(LocalDateTime.now().minusYears(1));
+        bankAccountDTO.setEndDate(LocalDateTime.now().plusYears(1));
+
+        bankAccountResponse.setData(bankAccountDTO);
+        bankAccountResponse.setStatus("SUCCESS");
+
+        when(employerWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestBodyUriSpec.uri(anyString(), any(), any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(), any(Class.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+    }
+
+    @Test
+    void testUpdateBankAccountResponse_Success() {
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(bankAccountResponseDTO));
+
+        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, employerGroupId, accountId);
+        assertNotNull(result);
+    }
+
+    @Test
+    void testUpdateBankAccountResponse_NotFound() {
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.empty());
+
+        StepVerifier.create(bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, employerGroupId, accountId))
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void testGetBankAccountInfoFromBankService_Success() {
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(bankAccountResponse));
+
+        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService(employerGroupId, accountId);
+        assertNotNull(result);
+        assertEquals("SUCCESS", result.getStatus());
+        assertEquals(bankAccountDTO, result.getData());
+    }
+
+    @Test
+    void testGetBankAccountInfoFromBankService_NotFound() {
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.empty());
+
+        StepVerifier.create(bankAccountClient.callGetBankAccountInfoApi(employerGroupId, accountId))
+                .expectComplete()
+                .verify();
+    }
+}
