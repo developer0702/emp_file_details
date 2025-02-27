@@ -12,10 +12,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class BankAccountClientTest {
@@ -76,11 +77,14 @@ class BankAccountClientTest {
 
     @Test
     void testUpdateBankAccountResponse_NotFound() {
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.empty());
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+                .thenReturn(Mono.error(new WebClientResponseException(404, "Not Found", null, null, null)));
 
-        StepVerifier.create(bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, employerGroupId, accountId))
-                .expectComplete()
-                .verify();
+        Optional<BankAccountResponseDTO> result = 
+                bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, employerGroupId, accountId)
+                        .blockOptional();
+
+        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -95,10 +99,13 @@ class BankAccountClientTest {
 
     @Test
     void testGetBankAccountInfoFromBankService_NotFound() {
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.empty());
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(new WebClientResponseException(404, "Not Found", null, null, null)));
 
-        StepVerifier.create(bankAccountClient.callGetBankAccountInfoApi(employerGroupId, accountId))
-                .expectComplete()
-                .verify();
+        Optional<BankAccountResponse> result = 
+                bankAccountClient.callGetBankAccountInfoApi(employerGroupId, accountId)
+                        .blockOptional();
+
+        assertTrue(result.isEmpty());
     }
 }
