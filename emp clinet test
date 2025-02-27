@@ -1,3 +1,60 @@
+package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.optum.ftps.ob.core.employer.details.util.CustomLocalDateTimeDeserializer;
+import com.optum.ftps.ob.core.employer.details.util.CustomLocalDateTimeSerializer;
+
+import jakarta.validation.constraints.NotBlank;
+
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+public class BankAccountDTO extends AbstractRequestData {
+    private Long id;
+    // @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Long employerId;
+    private String usage;
+
+    @NotBlank(message = "Bank name cannot be null")
+    private String bankName;
+
+    @NotBlank(message = "Routing number cannot be null")
+    private String routingNumber;
+
+    @NotBlank(message = "Account number cannot be null")
+    private String accountNumber;
+
+    @NotBlank(message = "Account type cannot be null")
+    private String accountType;
+
+    private String nickName;
+    private String accountStatus;
+
+    @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
+    private LocalDateTime startDate;
+
+    @JsonDeserialize(using = CustomLocalDateTimeDeserializer.class)
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
+    private LocalDateTime endDate;
+}
+
+================================
+package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+public class BankAccountResponse {
+    private BankAccountDTO data;
+    private String status;
+}
+
 =========================
 package com.optum.ftps.ob.core.employer.details.resolver;
 
