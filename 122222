@@ -1,0 +1,192 @@
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
+
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
+import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ClientException;
+import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
+import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+class BankAccountClientTest {
+
+    @Mock private WebClient employerWebClient;
+    @Mock private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+    @Mock private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    @Mock private WebClient.RequestHeadersSpec requestHeadersSpec;
+    @Mock private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks private BankAccountClient bankAccountClient;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        when(employerWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
+    }
+
+    @Test
+    void testUpdateBankAccountResponse_Success() {
+        // Arrange
+        BankAccountDTO bankAccountInput = new BankAccountDTO();
+        bankAccountInput.setBankName("Test Bank");
+        bankAccountInput.setRoutingNumber("123456789");
+        bankAccountInput.setAccountNumber("987654321");
+        bankAccountInput.setAccountType("Savings");
+
+        BankAccountResponseDTO bankAccountResponseDTO = BankAccountResponseDTO.builder()
+                .data(1L)
+                .status("SUCCESS")
+                .build();
+
+        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(Mono.class), eq(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(bankAccountResponseDTO));
+
+        // Act
+        BankAccountResponseDTO response = bankAccountClient.updateBankAccountResponse(bankAccountInput, "abc123", 1L);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1L, response.getData());
+        assertEquals("SUCCESS", response.getStatus());
+    }
+
+    @Test
+    void testGetBankAccountInfoFromBankService_Success() {
+        // Arrange
+        BankAccountResponse bankAccountResponse = new BankAccountResponse();
+        BankAccountDTO bankAccountDTO = new BankAccountDTO();
+        bankAccountDTO.setId(1L);
+        bankAccountResponse.setData(bankAccountDTO);
+
+        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(bankAccountResponse));
+
+        // Act
+        BankAccountResponse response = bankAccountClient.getBankAccountInfoFromBankService("abc123", 1L);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1L, response.getData().getId());
+    }
+
+    @Test
+    void testCallUpdateBankAccountApi_ClientError() {
+        // Arrange
+        BankAccountDTO bankAccountInput = new BankAccountDTO();
+
+        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(Mono.class), eq(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+                .thenReturn(Mono.error(new ClientException(List.of(ErrorItem.builder()
+                        .statusCode("400")
+                        .statusDescription("Bad Request")
+                        .severity("ERR")
+                        .build()))));
+
+        // Act & Assert
+        assertThrows(ClientException.class, () -> {
+            bankAccountClient.callUpdateBankAccountApi(bankAccountInput, "123", 1L).block();
+        });
+    }
+
+    @Test
+    void testCallUpdateBankAccountApi_ServerError() {
+        // Arrange
+        BankAccountDTO bankAccountInput = new BankAccountDTO();
+
+        when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.body(any(Mono.class), eq(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+                .thenReturn(Mono.error(new ServiceException(List.of(ErrorItem.builder()
+                        .statusCode("500")
+                        .statusDescription("Internal Server Error")
+                        .severity("ERR")
+                        .build()))));
+
+        // Act & Assert
+        assertThrows(ServiceException.class, () -> {
+            bankAccountClient.callUpdateBankAccountApi(bankAccountInput, "123", 1L).block();
+        });
+    }
+
+    @Test
+    void testCallGetBankAccountInfo_ClientError() {
+        // Arrange
+        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(new ClientException(List.of(ErrorItem.builder()
+                        .statusCode("400")
+                        .statusDescription("Bad Request")
+                        .severity("ERR")
+                        .build()))));
+
+        // Act & Assert
+        assertThrows(ClientException.class, () -> {
+            bankAccountClient.callGetBankAccountInfo("123", 1L).block();
+        });
+    }
+
+    @Test
+    void testCallGetBankAccountInfo_ServerError() {
+        // Arrange
+        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(new ServiceException(List.of(ErrorItem.builder()
+                        .statusCode("500")
+                        .statusDescription("Internal Server Error")
+                        .severity("ERR")
+                        .build()))));
+
+        // Act & Assert
+        assertThrows(ServiceException.class, () -> {
+            bankAccountClient.callGetBankAccountInfo("123", 1L).block();
+        });
+    }
+
+    @Test
+    void testCallGetBankAccountInfo_NotFound() {
+        // Arrange
+        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(BankAccountResponse.class))
+                .thenReturn(Mono.error(new ClientException(List.of(ErrorItem.builder()
+                        .statusCode("404")
+                        .statusDescription("Not Found")
+                        .severity("ERR")
+                        .build()))));
+
+        // Act & Assert
+        assertThrows(ClientException.class, () -> {
+            bankAccountClient.callGetBankAccountInfo("123", 1L).block();
+        });
+    }
+}
