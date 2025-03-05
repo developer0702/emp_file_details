@@ -1,6 +1,19 @@
 package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class ErrorDTO {
+    private String code;
+    private String message;
+}
+
+================================================
+package com.optum.ftps.ob.core.employer.details.dto.bankaccount;
+
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
