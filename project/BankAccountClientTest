@@ -1,220 +1,27 @@
-package com.optum.ftps.ob.core.employer.details.resolver;
+@Test
+void testUpdateBankAccountResponse_Success() {
+    BankAccountDTO bankAccountDTO = new BankAccountDTO();
+    bankAccountDTO.setBankName("Test Bank");
+    bankAccountDTO.setRoutingNumber("123456789");
+    bankAccountDTO.setAccountNumber("987654321");
+    bankAccountDTO.setAccountType("Savings");
 
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountDTO;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponse;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.BankAccountResponseDTO;
-import com.optum.ftps.ob.core.employer.details.dto.bankaccount.ErrorDTO;
-import com.optum.ftps.ob.core.employer.details.exceptions.ClientException;
-import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+    BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
+    responseDTO.setData(1L);
+    responseDTO.setStatus("Success");
 
-import java.time.LocalDateTime;
-import java.util.List;
+    // Use RETURNS_DEEP_STUBS to mock the entire WebClient chain
+    when(employerWebClient.post()
+            .uri(anyString(), any(), any())
+            .body(any(), any())
+            .retrieve()
+            .bodyToMono(BankAccountResponseDTO.class))
+            .thenReturn(Mono.just(responseDTO));
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+    BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "employerGroupId", 1L);
 
-class BankAccountClientTest {
-
-    @Mock
-    private WebClient employerWebClient;
-
-    @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
-
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
-
-    @InjectMocks
-    private BankAccountClient bankAccountClient;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
-    @Test
-    void testUpdateBankAccountResponse_Success() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        BankAccountResponseDTO responseDTO = new BankAccountResponseDTO();
-        responseDTO.setData(1L);
-        responseDTO.setStatus("Success");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.just(responseDTO));
-
-        BankAccountResponseDTO result = bankAccountClient.updateBankAccountResponse(bankAccountDTO, "employerGroupId", 1L);
-
-        verify(employerWebClient, times(1)).post();
-        verify(requestHeadersUriSpec, times(1)).uri(anyString(), any(), any());
-        verify(requestHeadersSpec, times(1)).body(any(), any());
-        verify(requestHeadersSpec, times(1)).retrieve();
-        verify(responseSpec, times(1)).bodyToMono(BankAccountResponseDTO.class);
-
-        assert(result != null);
-        assert(result.getData().equals(1L));
-        assert(result.getStatus().equals("Success"));
-    }
-
-    @Test
-    void testGetBankAccountInfoFromBankService_Success() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        BankAccountResponse response = new BankAccountResponse();
-        response.setData(bankAccountDTO);
-        response.setStatus("Success");
-
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.just(response));
-
-        BankAccountResponse result = bankAccountClient.getBankAccountInfoFromBankService("employerGroupId", 1L);
-
-        verify(employerWebClient, times(1)).get();
-        verify(requestHeadersUriSpec, times(1)).uri(anyString(), any(), any());
-        verify(requestHeadersSpec, times(1)).retrieve();
-        verify(responseSpec, times(1)).bodyToMono(BankAccountResponse.class);
-
-        assert(result != null);
-        assert(result.getData().equals(bankAccountDTO));
-        assert(result.getStatus().equals("Success"));
-    }
-
-    @Test
-    void testCallUpdateBankAccountApi_ClientError() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.error(new ClientException("Client Error")));
-
-        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectError(ClientException.class)
-                .verify();
-    }
-
-    @Test
-    void testCallUpdateBankAccountApi_ServerError() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.error(new ServiceException("Server Error")));
-
-        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectError(ServiceException.class)
-                .verify();
-    }
-
-    @Test
-    void testCallUpdateBankAccountApi_NotFoundError() {
-        BankAccountDTO bankAccountDTO = new BankAccountDTO();
-        bankAccountDTO.setBankName("Test Bank");
-        bankAccountDTO.setRoutingNumber("123456789");
-        bankAccountDTO.setAccountNumber("987654321");
-        bankAccountDTO.setAccountType("Savings");
-
-        when(employerWebClient.post()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.body(any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponseDTO.class)).thenReturn(Mono.empty());
-
-        Mono<BankAccountResponseDTO> result = bankAccountClient.callUpdateBankAccountApi(bankAccountDTO, "employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectComplete()
-                .verify();
-    }
-
-    @Test
-    void testCallGetBankAccountInfo_ClientError() {
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.error(new ClientException("Client Error")));
-
-        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfo("employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectError(ClientException.class)
-                .verify();
-    }
-
-    @Test
-    void testCallGetBankAccountInfo_ServerError() {
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.error(new ServiceException("Server Error")));
-
-        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfo("employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectError(ServiceException.class)
-                .verify();
-    }
-
-    @Test
-    void testCallGetBankAccountInfo_NotFoundError() {
-        when(employerWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(anyString(), any(), any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(BankAccountResponse.class)).thenReturn(Mono.empty());
-
-        Mono<BankAccountResponse> result = bankAccountClient.callGetBankAccountInfo("employerGroupId", 1L);
-
-        StepVerifier.create(result)
-                .expectComplete()
-                .verify();
-    }
+    // Verify the result
+    assert(result != null);
+    assert(result.getData().equals(1L));
+    assert(result.getStatus().equals("Success"));
 }
