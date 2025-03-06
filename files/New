@@ -1,60 +1,79 @@
-package com.optum.ftps.ob.core.employer.details.dto;
+package com.optum.ftps.ob.core.employer.details.exceptions.model;
 
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-class StatusMessageTypeTest {
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
-    @Test
-    void testConstructorAndGetters() {
-        // Arrange
-        String statusCode = "200";
-        String severity = "INFO";
-        String statusDescription = "Success";
+import java.util.ArrayList;
+import java.util.List;
 
-        // Act
-        StatusMessageType statusMessageType = new StatusMessageType(statusCode, severity, statusDescription);
+@Builder
+@ToString
+@EqualsAndHashCode
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ErrorResponse {
 
-        // Assert
-        assertEquals(statusCode, statusMessageType.getStatusCode());
-        assertEquals(severity, statusMessageType.getSeverity());
-        assertEquals(statusDescription, statusMessageType.getStatusDescription());
+    private final List<ErrorItem> errors = new ArrayList<>();
+
+    public ErrorResponse addItem(ErrorItem errorsItem) {
+        this.errors.add(errorsItem);
+        return this;
     }
 
-    @Test
-    void testBuilder() {
-        // Arrange
-        String statusCode = "404";
-        String severity = "ERROR";
-        String statusDescription = "Not Found";
+    @JsonProperty("errors")
+    public List<ErrorItem> getErrors() {
+        return errors;
+    }
+}
+===========================
+package com.optum.ftps.ob.core.employer.details.exceptions.model;
 
-        // Act
-        StatusMessageType statusMessageType = StatusMessageType.builder()
-                .statusCode(statusCode)
-                .severity(severity)
-                .statusDescription(statusDescription)
-                .build();
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-        // Assert
-        assertEquals(statusCode, statusMessageType.getStatusCode());
-        assertEquals(severity, statusMessageType.getSeverity());
-        assertEquals(statusDescription, statusMessageType.getStatusDescription());
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+@Builder
+@ToString
+@EqualsAndHashCode
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@AllArgsConstructor
+public class ErrorItem {
+
+    private String statusCode;
+    private String severity;
+    private String statusDescription;
+
+    @JsonProperty("statusCode")
+    public String getStatusCode() {
+        return statusCode;
     }
 
-    @Test
-    void testToString() {
-        // Arrange
-        String statusCode = "500";
-        String severity = "FATAL";
-        String statusDescription = "Internal Server Error";
-        StatusMessageType statusMessageType = new StatusMessageType(statusCode, severity, statusDescription);
+    public void setStatusCode(String statusCode) {
+        this.statusCode = statusCode;
+    }
 
-        // Act
-        String toStringResult = statusMessageType.toString();
+    @JsonProperty("severity")
+    public String getSeverity() {
+        return severity;
+    }
 
-        // Assert
-        assertTrue(toStringResult.contains(statusCode));
-        assertTrue(toStringResult.contains(severity));
-        assertTrue(toStringResult.contains(statusDescription));
+    public void setSeverity(String severity) {
+        this.severity = severity;
+    }
+
+    @JsonProperty("statusDescription")
+    public String getStatusDescription() {
+        return statusDescription;
+    }
+
+    public void setStatusDescription(String statusDescription) {
+        this.statusDescription = statusDescription;
     }
 }
