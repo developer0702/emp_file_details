@@ -1,4 +1,4 @@
-package com.optum.ftps.ob.core.employer.details.exceptions.model;
+package com.optum.ftps.ob.core.employer.details.exception;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -9,27 +9,32 @@ class ErrorResponseTest {
 
     @Test
     void testErrorResponseWith400SeriesErrors() {
-        // Create an instance of ErrorResponse
-        ErrorResponse errorResponse = new ErrorResponse();
+        // Create an instance of ErrorResponse using the builder
+        ErrorResponse errorResponse = ErrorResponse.builder().build();
 
-        // Add 400 series errors
-        errorResponse.addItem(ErrorItem.builder()
+        // Create ErrorItem instances using the builder
+        ErrorItem badRequestError = ErrorItem.builder()
                 .statusCode("400")
                 .severity("ERROR")
                 .statusDescription("Bad Request")
-                .build());
+                .build();
 
-        errorResponse.addItem(ErrorItem.builder()
+        ErrorItem unauthorizedError = ErrorItem.builder()
                 .statusCode("401")
                 .severity("ERROR")
                 .statusDescription("Unauthorized")
-                .build());
+                .build();
 
-        errorResponse.addItem(ErrorItem.builder()
+        ErrorItem notFoundError = ErrorItem.builder()
                 .statusCode("404")
                 .severity("ERROR")
                 .statusDescription("Not Found")
-                .build());
+                .build();
+
+        // Add ErrorItem instances to ErrorResponse
+        errorResponse.addItem(badRequestError);
+        errorResponse.addItem(unauthorizedError);
+        errorResponse.addItem(notFoundError);
 
         // Retrieve the list of errors
         List<ErrorItem> errors = errorResponse.getErrors();
@@ -50,21 +55,25 @@ class ErrorResponseTest {
 
     @Test
     void testErrorResponseWith500SeriesErrors() {
-        // Create an instance of ErrorResponse
-        ErrorResponse errorResponse = new ErrorResponse();
+        // Create an instance of ErrorResponse using the builder
+        ErrorResponse errorResponse = ErrorResponse.builder().build();
 
-        // Add 500 series errors
-        errorResponse.addItem(ErrorItem.builder()
+        // Create ErrorItem instances using the builder
+        ErrorItem internalServerError = ErrorItem.builder()
                 .statusCode("500")
                 .severity("CRITICAL")
                 .statusDescription("Internal Server Error")
-                .build());
+                .build();
 
-        errorResponse.addItem(ErrorItem.builder()
+        ErrorItem serviceUnavailableError = ErrorItem.builder()
                 .statusCode("503")
                 .severity("CRITICAL")
                 .statusDescription("Service Unavailable")
-                .build());
+                .build();
+
+        // Add ErrorItem instances to ErrorResponse
+        errorResponse.addItem(internalServerError);
+        errorResponse.addItem(serviceUnavailableError);
 
         // Retrieve the list of errors
         List<ErrorItem> errors = errorResponse.getErrors();
@@ -112,15 +121,19 @@ class ErrorResponseTest {
 
     @Test
     void testErrorResponseToStringAndEqualsAndHashCode() {
-        // Create two instances of ErrorResponse with the same ErrorItem
+        // Create an instance of ErrorItem
         ErrorItem errorItem = ErrorItem.builder()
                 .statusCode("404")
                 .severity("ERROR")
                 .statusDescription("Not Found")
                 .build();
 
-        ErrorResponse errorResponse1 = new ErrorResponse().addItem(errorItem);
-        ErrorResponse errorResponse2 = new ErrorResponse().addItem(errorItem);
+        // Create two instances of ErrorResponse using the builder
+        ErrorResponse errorResponse1 = ErrorResponse.builder().build();
+        errorResponse1.addItem(errorItem);
+
+        ErrorResponse errorResponse2 = ErrorResponse.builder().build();
+        errorResponse2.addItem(errorItem);
 
         // Verify toString method
         assertNotNull(errorResponse1.toString());
