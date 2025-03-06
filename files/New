@@ -1,37 +1,23 @@
-
-com.optum.ftps.ob.core.employer.details.exceptions.ClientException
-	at com.optum.ftps.ob.core.employer.details.resolver.BankAccountHelperTest.testAddBankAccountResponse_NotFound(BankAccountHelperTest.java:362)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	Suppressed: java.lang.Exception: #block terminated with an error
-		at reactor.core.publisher.BlockingSingleSubscriber.blockingGet(BlockingSingleSubscriber.java:104)
-		at reactor.core.publisher.Mono.block(Mono.java:1779)
-		at com.optum.ftps.ob.core.employer.details.resolver.BankAccountHelper.addBankAccountResponse(BankAccountHelper.java:68)
-		at com.optum.ftps.ob.core.employer.details.resolver.BankAccountHelperTest.testAddBankAccountResponse_NotFound(BankAccountHelperTest.java:369)
-		... 3 more
-
-
-
-
 @Test
-    void testAddBankAccountResponse_NotFound() {
-       // Arrange
-       BankAccountDTO bankAccountInput = new BankAccountDTO();
+void testAddBankAccountResponse_NotFound() {
+    // Arrange
+    BankAccountDTO bankAccountInput = new BankAccountDTO();
 
-       when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
-       when(requestBodyUriSpec.bodyValue(any(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
-       when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-       when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-       when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
-               .thenReturn(Mono.error(new ClientException(
-                       List.of(
-                               ErrorItem.builder()
-                                       .statusCode("404")
-                                       .statusDescription("Not Found")
-                                       .severity("ERR")
-                                       .build()))));
-       // Act & Assert
-       BankAccountResponseDTO response = bankAccountHelper.addBankAccountResponse(bankAccountInput, "123");
-       assertNull(response);
-    }
+    when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.bodyValue(any(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+            .thenReturn(Mono.error(new ClientException(
+                    List.of(
+                            ErrorItem.builder()
+                                    .statusCode("404")
+                                    .statusDescription("Not Found")
+                                    .severity("ERR")
+                                    .build()))));
+
+    // Act & Assert
+    assertThrows(ClientException.class, () -> {
+        bankAccountHelper.addBankAccountResponse(bankAccountInput, "123");
+    });
+}
