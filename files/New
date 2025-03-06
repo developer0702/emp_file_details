@@ -1,102 +1,60 @@
-package com.optum.ftps.ob.core.employer.details.config;
+package com.optum.ftps.ob.core.employer.details.dto;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClient;
+import static org.junit.jupiter.api.Assertions.*;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.*;
-
-class WebClientConfigTest {
-
-    @Mock
-    private WebClient.Builder webClientBuilder;
-
-    @Mock
-    private WebClient webClient;
-
-    private WebClientConfig webClientConfig;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        webClientConfig = new WebClientConfig("http://aggregate-employer-url", "http://corebanking-employer-url");
-    }
+class StatusMessageTypeTest {
 
     @Test
-    void testCreateWebClient() {
+    void testConstructorAndGetters() {
         // Arrange
-        String url = "http://test-url";
-        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
-        when(webClientBuilder.build()).thenReturn(webClient);
+        String statusCode = "200";
+        String severity = "INFO";
+        String statusDescription = "Success";
 
         // Act
-        WebClient result = webClientConfig.createWebClient(webClientBuilder, url);
+        StatusMessageType statusMessageType = new StatusMessageType(statusCode, severity, statusDescription);
 
         // Assert
-        assertNotNull(result);
-        verify(webClientBuilder).baseUrl(url);
-        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
-        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
-        verify(webClientBuilder).clientConnector(any());
-        verify(webClientBuilder).build();
+        assertEquals(statusCode, statusMessageType.getStatusCode());
+        assertEquals(severity, statusMessageType.getSeverity());
+        assertEquals(statusDescription, statusMessageType.getStatusDescription());
     }
 
     @Test
-    void testEmployerAssociationWebClient() {
+    void testBuilder() {
         // Arrange
-        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
-        when(webClientBuilder.build()).thenReturn(webClient);
+        String statusCode = "404";
+        String severity = "ERROR";
+        String statusDescription = "Not Found";
 
         // Act
-        WebClient result = webClientConfig.employerAssociationWebClient(webClientBuilder);
+        StatusMessageType statusMessageType = StatusMessageType.builder()
+                .statusCode(statusCode)
+                .severity(severity)
+                .statusDescription(statusDescription)
+                .build();
 
         // Assert
-        assertNotNull(result);
-        verify(webClientBuilder).baseUrl("http://aggregate-employer-url");
-        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
-        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
-        verify(webClientBuilder).clientConnector(any());
-        verify(webClientBuilder).build();
+        assertEquals(statusCode, statusMessageType.getStatusCode());
+        assertEquals(severity, statusMessageType.getSeverity());
+        assertEquals(statusDescription, statusMessageType.getStatusDescription());
     }
 
     @Test
-    void testEmployerWebClient() {
+    void testToString() {
         // Arrange
-        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
-        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
-        when(webClientBuilder.build()).thenReturn(webClient);
+        String statusCode = "500";
+        String severity = "FATAL";
+        String statusDescription = "Internal Server Error";
+        StatusMessageType statusMessageType = new StatusMessageType(statusCode, severity, statusDescription);
 
         // Act
-        WebClient result = webClientConfig.employerWebClient(webClientBuilder);
+        String toStringResult = statusMessageType.toString();
 
         // Assert
-        assertNotNull(result);
-        verify(webClientBuilder).baseUrl("http://corebanking-employer-url");
-        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
-        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
-        verify(webClientBuilder).clientConnector(any());
-        verify(webClientBuilder).build();
-    }
-
-    @Test
-    void testEmployerDetailsResponseDTO() {
-        // Act
-        EmployerDetailsResponseDTO result = webClientConfig.employerDetailsResponseDTO();
-
-        // Assert
-        assertNotNull(result);
+        assertTrue(toStringResult.contains(statusCode));
+        assertTrue(toStringResult.contains(severity));
+        assertTrue(toStringResult.contains(statusDescription));
     }
 }
