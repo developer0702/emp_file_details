@@ -1,79 +1,109 @@
 package com.optum.ftps.ob.core.employer.details.exceptions.model;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-import java.util.ArrayList;
 import java.util.List;
 
-@Builder
-@ToString
-@EqualsAndHashCode
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class ErrorResponse {
+class ErrorResponseTest {
 
-    private final List<ErrorItem> errors = new ArrayList<>();
+    @Test
+    void testErrorResponse() {
+        // Create an instance of ErrorResponse
+        ErrorResponse errorResponse = new ErrorResponse();
 
-    public ErrorResponse addItem(ErrorItem errorsItem) {
-        this.errors.add(errorsItem);
-        return this;
+        // Create an instance of ErrorItem
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        // Add the ErrorItem to the ErrorResponse
+        ErrorResponse response = errorResponse.addItem(errorItem);
+
+        // Verify that the response is the same instance as errorResponse
+        assertSame(errorResponse, response);
+
+        // Retrieve the list of errors from the ErrorResponse
+        List<ErrorItem> errors = errorResponse.getErrors();
+
+        // Verify that the list contains the added ErrorItem
+        assertEquals(1, errors.size());
+        assertSame(errorItem, errors.get(0));
     }
 
-    @JsonProperty("errors")
-    public List<ErrorItem> getErrors() {
-        return errors;
-    }
-}
-===========================
-package com.optum.ftps.ob.core.employer.details.exceptions.model;
+    @Test
+    void testErrorItem() {
+        // Create an instance of ErrorItem using the builder
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("500")
+                .severity("CRITICAL")
+                .statusDescription("Internal Server Error")
+                .build();
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+        // Verify the properties of the ErrorItem
+        assertEquals("500", errorItem.getStatusCode());
+        assertEquals("CRITICAL", errorItem.getSeverity());
+        assertEquals("Internal Server Error", errorItem.getStatusDescription());
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+        // Modify the properties using the setter methods
+        errorItem.setStatusCode("400");
+        errorItem.setSeverity("WARNING");
+        errorItem.setStatusDescription("Bad Request");
 
-@Builder
-@ToString
-@EqualsAndHashCode
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@AllArgsConstructor
-public class ErrorItem {
-
-    private String statusCode;
-    private String severity;
-    private String statusDescription;
-
-    @JsonProperty("statusCode")
-    public String getStatusCode() {
-        return statusCode;
+        // Verify the modified properties
+        assertEquals("400", errorItem.getStatusCode());
+        assertEquals("WARNING", errorItem.getSeverity());
+        assertEquals("Bad Request", errorItem.getStatusDescription());
     }
 
-    public void setStatusCode(String statusCode) {
-        this.statusCode = statusCode;
+    @Test
+    void testErrorResponseToStringAndEqualsAndHashCode() {
+        // Create two instances of ErrorResponse with the same ErrorItem
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        ErrorResponse errorResponse1 = new ErrorResponse().addItem(errorItem);
+        ErrorResponse errorResponse2 = new ErrorResponse().addItem(errorItem);
+
+        // Verify toString method
+        assertNotNull(errorResponse1.toString());
+        assertNotNull(errorResponse2.toString());
+
+        // Verify equals method
+        assertEquals(errorResponse1, errorResponse2);
+
+        // Verify hashCode method
+        assertEquals(errorResponse1.hashCode(), errorResponse2.hashCode());
     }
 
-    @JsonProperty("severity")
-    public String getSeverity() {
-        return severity;
-    }
+    @Test
+    void testErrorItemToStringAndEqualsAndHashCode() {
+        // Create two instances of ErrorItem with the same properties
+        ErrorItem errorItem1 = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
 
-    public void setSeverity(String severity) {
-        this.severity = severity;
-    }
+        ErrorItem errorItem2 = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
 
-    @JsonProperty("statusDescription")
-    public String getStatusDescription() {
-        return statusDescription;
-    }
+        // Verify toString method
+        assertNotNull(errorItem1.toString());
+        assertNotNull(errorItem2.toString());
 
-    public void setStatusDescription(String statusDescription) {
-        this.statusDescription = statusDescription;
+        // Verify equals method
+        assertEquals(errorItem1, errorItem2);
+
+        // Verify hashCode method
+        assertEquals(errorItem1.hashCode(), errorItem2.hashCode());
     }
 }
