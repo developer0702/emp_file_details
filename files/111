@@ -1,0 +1,18 @@
+package com.optum.ftps.ob.core.employer.details.dto;
+
+import lombok.Builder;
+import lombok.Data;
+
+@Builder
+@Data
+public class StatusMessageType {
+    private final String statusCode;
+    private final String severity;
+    private final String statusDescription;
+
+    public StatusMessageType(String statusCode, String severity, String statusDescription) {
+        this.statusCode = statusCode;
+        this.severity = severity;
+        this.statusDescription = statusDescription;
+    }
+}
