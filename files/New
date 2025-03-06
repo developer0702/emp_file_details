@@ -1,174 +1,162 @@
-package com.optum.ftps.ob.core.employer.details.exception;
+package com.optum.ftps.ob.core.employer.details.resolver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.when;
+
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceRequestDTO;
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceResponseDTO;
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceResponseDTO.Status;
+import com.optum.ftps.ob.core.employer.details.exceptions.ClientException;
+import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
+import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.util.List;
 
-class ErrorResponseTest {
+class AggregatorEmployerAssociationClientTest {
 
-    @Test
-    void testErrorResponseWith400SeriesErrors() {
-        // Create an instance of ErrorResponse using the builder
-        ErrorResponse errorResponse = ErrorResponse.builder().build();
+    @Mock private WebClient employerAssociationWebClient;
 
-        // Create ErrorItem instances using the builder
-        ErrorItem badRequestError = ErrorItem.builder()
-                .statusCode("400")
-                .severity("ERROR")
-                .statusDescription("Bad Request")
-                .build();
+    @Mock private WebClient.RequestBodyUriSpec requestBodyUriSpec;
 
-        ErrorItem unauthorizedError = ErrorItem.builder()
-                .statusCode("401")
-                .severity("ERROR")
-                .statusDescription("Unauthorized")
-                .build();
+    @Mock private WebClient.RequestBodySpec requestBodySpec;
 
-        ErrorItem notFoundError = ErrorItem.builder()
-                .statusCode("404")
-                .severity("ERROR")
-                .statusDescription("Not Found")
-                .build();
+    @Mock private WebClient.RequestHeadersSpec requestHeadersSpec;
 
-        // Add ErrorItem instances to ErrorResponse
-        errorResponse.addItem(badRequestError);
-        errorResponse.addItem(unauthorizedError);
-        errorResponse.addItem(notFoundError);
+    @Mock private WebClient.ResponseSpec responseSpec;
 
-        // Retrieve the list of errors
-        List<ErrorItem> errors = errorResponse.getErrors();
+    @InjectMocks private AggregatorEmployerAssociationClient client;
 
-        // Verify the size of the list
-        assertEquals(3, errors.size());
-
-        // Verify the details of each error
-        assertEquals("400", errors.get(0).getStatusCode());
-        assertEquals("Bad Request", errors.get(0).getStatusDescription());
-
-        assertEquals("401", errors.get(1).getStatusCode());
-        assertEquals("Unauthorized", errors.get(1).getStatusDescription());
-
-        assertEquals("404", errors.get(2).getStatusCode());
-        assertEquals("Not Found", errors.get(2).getStatusDescription());
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testErrorResponseWith500SeriesErrors() {
-        // Create an instance of ErrorResponse using the builder
-        ErrorResponse errorResponse = ErrorResponse.builder().build();
+    void testSearchEmployerDetails_Success() {
+        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+        requestDTO.setId("123");
+        requestDTO.setGroupId("456");
+        requestDTO.setStatus("ACTIVE");
+        requestDTO.setEmployerName("Test Employer");
 
-        // Create ErrorItem instances using the builder
-        ErrorItem internalServerError = ErrorItem.builder()
-                .statusCode("500")
-                .severity("CRITICAL")
-                .statusDescription("Internal Server Error")
-                .build();
+        EmployerServiceResponseDTO responseDTO = new EmployerServiceResponseDTO();
+        responseDTO.setStatus(Status.SUCCESS);
 
-        ErrorItem serviceUnavailableError = ErrorItem.builder()
-                .statusCode("503")
-                .severity("CRITICAL")
-                .statusDescription("Service Unavailable")
-                .build();
+        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(EmployerServiceResponseDTO.class))
+                .thenReturn(Mono.just(responseDTO));
 
-        // Add ErrorItem instances to ErrorResponse
-        errorResponse.addItem(internalServerError);
-        errorResponse.addItem(serviceUnavailableError);
+        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
 
-        // Retrieve the list of errors
-        List<ErrorItem> errors = errorResponse.getErrors();
-
-        // Verify the size of the list
-        assertEquals(2, errors.size());
-
-        // Verify the details of each error
-        assertEquals("500", errors.get(0).getStatusCode());
-        assertEquals("Internal Server Error", errors.get(0).getStatusDescription());
-
-        assertEquals("503", errors.get(1).getStatusCode());
-        assertEquals("Service Unavailable", errors.get(1).getStatusDescription());
+        assertNotNull(result);
+        assertEquals(responseDTO, result.block());
     }
 
     @Test
-    void testErrorItemWith400SeriesError() {
-        // Create an instance of ErrorItem for a 400 series error
-        ErrorItem errorItem = ErrorItem.builder()
-                .statusCode("403")
-                .severity("ERROR")
-                .statusDescription("Forbidden")
-                .build();
+    void testSearchEmployerDetails_4xxError() {
+        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+        requestDTO.setId("123");
 
-        // Verify the properties
-        assertEquals("403", errorItem.getStatusCode());
-        assertEquals("ERROR", errorItem.getSeverity());
-        assertEquals("Forbidden", errorItem.getStatusDescription());
+        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            ClientResponse clientResponse = ClientResponse.create(status).build();
+            return client.handle4xxError(clientResponse);
+        });
+
+        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof ClientException)
+                .verify();
     }
 
     @Test
-    void testErrorItemWith500SeriesError() {
-        // Create an instance of ErrorItem for a 500 series error
-        ErrorItem errorItem = ErrorItem.builder()
-                .statusCode("502")
-                .severity("CRITICAL")
-                .statusDescription("Bad Gateway")
-                .build();
+    void testSearchEmployerDetails_5xxError() {
+        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+        requestDTO.setId("123");
 
-        // Verify the properties
-        assertEquals("502", errorItem.getStatusCode());
-        assertEquals("CRITICAL", errorItem.getSeverity());
-        assertEquals("Bad Gateway", errorItem.getStatusDescription());
+        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
+            HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+            ClientResponse clientResponse = ClientResponse.create(status).build();
+            return client.handle5xxError(clientResponse);
+        });
+
+        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof ServiceException)
+                .verify();
     }
 
     @Test
-    void testErrorResponseToStringAndEqualsAndHashCode() {
-        // Create an instance of ErrorItem
-        ErrorItem errorItem = ErrorItem.builder()
-                .statusCode("404")
-                .severity("ERROR")
-                .statusDescription("Not Found")
-                .build();
+    void testSearchEmployerDetails_NotFound() {
+        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+        requestDTO.setId("123");
 
-        // Create two instances of ErrorResponse using the builder
-        ErrorResponse errorResponse1 = ErrorResponse.builder().build();
-        errorResponse1.addItem(errorItem);
+        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(EmployerServiceResponseDTO.class))
+                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", null, null, null)));
 
-        ErrorResponse errorResponse2 = ErrorResponse.builder().build();
-        errorResponse2.addItem(errorItem);
+        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
 
-        // Verify toString method
-        assertNotNull(errorResponse1.toString());
-        assertNotNull(errorResponse2.toString());
-
-        // Verify equals method
-        assertEquals(errorResponse1, errorResponse2);
-
-        // Verify hashCode method
-        assertEquals(errorResponse1.hashCode(), errorResponse2.hashCode());
+        StepVerifier.create(result)
+                .expectComplete()
+                .verify();
     }
 
     @Test
-    void testErrorItemToStringAndEqualsAndHashCode() {
-        // Create two instances of ErrorItem with the same properties
-        ErrorItem errorItem1 = ErrorItem.builder()
-                .statusCode("404")
-                .severity("ERROR")
-                .statusDescription("Not Found")
-                .build();
+    void testHandle4xxError() {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ClientResponse clientResponse = ClientResponse.create(status).build();
 
-        ErrorItem errorItem2 = ErrorItem.builder()
-                .statusCode("404")
-                .severity("ERROR")
-                .statusDescription("Not Found")
-                .build();
+        Mono<Throwable> result = client.handle4xxError(clientResponse);
 
-        // Verify toString method
-        assertNotNull(errorItem1.toString());
-        assertNotNull(errorItem2.toString());
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof ClientException)
+                .verify();
+    }
 
-        // Verify equals method
-        assertEquals(errorItem1, errorItem2);
+    @Test
+    void testHandle5xxError() {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        ClientResponse clientResponse = ClientResponse.create(status).build();
 
-        // Verify hashCode method
-        assertEquals(errorItem1.hashCode(), errorItem2.hashCode());
+        Mono<Throwable> result = client.handle5xxError(clientResponse);
+
+        StepVerifier.create(result)
+                .expectErrorMatches(throwable -> throwable instanceof ServiceException)
+                .verify();
     }
 }
