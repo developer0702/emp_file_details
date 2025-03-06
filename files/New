@@ -1,3 +1,22 @@
+
+java.lang.ClassCastException: class reactor.core.publisher.MonoError cannot be cast to class org.springframework.web.reactive.function.client.WebClient$ResponseSpec (reactor.core.publisher.MonoError and org.springframework.web.reactive.function.client.WebClient$ResponseSpec are in unnamed module of loader 'app')
+
+	at org.springframework.web.reactive.function.client.WebClient$ResponseSpec$MockitoMock$SSrolb5F.onStatus(Unknown Source)
+	at com.optum.ftps.ob.core.employer.details.resolver.AggregatorEmployerAssociationClient.searchEmployerDetails(AggregatorEmployerAssociationClient.java:42)
+	at com.optum.ftps.ob.core.employer.details.resolver.AggregatorEmployerAssociationClientTest.testSearchEmployerDetails_4xxError(AggregatorEmployerAssociationClientTest.java:89)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+
+java.lang.AssertionError: expectation "expectComplete" failed (expected: onComplete(); actual: onError(com.optum.ftps.ob.core.employer.details.exceptions.ClientException))
+
+	at reactor.test.MessageFormatter.assertionError(MessageFormatter.java:115)
+	at reactor.test.MessageFormatter.failPrefix(MessageFormatter.java:104)
+
+
+
+
 package com.optum.ftps.ob.core.employer.details.resolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
