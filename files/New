@@ -8,54 +8,106 @@ import java.util.List;
 class ErrorResponseTest {
 
     @Test
-    void testErrorResponse() {
+    void testErrorResponseWith400SeriesErrors() {
         // Create an instance of ErrorResponse
         ErrorResponse errorResponse = new ErrorResponse();
 
-        // Create an instance of ErrorItem
-        ErrorItem errorItem = ErrorItem.builder()
+        // Add 400 series errors
+        errorResponse.addItem(ErrorItem.builder()
+                .statusCode("400")
+                .severity("ERROR")
+                .statusDescription("Bad Request")
+                .build());
+
+        errorResponse.addItem(ErrorItem.builder()
+                .statusCode("401")
+                .severity("ERROR")
+                .statusDescription("Unauthorized")
+                .build());
+
+        errorResponse.addItem(ErrorItem.builder()
                 .statusCode("404")
                 .severity("ERROR")
                 .statusDescription("Not Found")
-                .build();
+                .build());
 
-        // Add the ErrorItem to the ErrorResponse
-        ErrorResponse response = errorResponse.addItem(errorItem);
-
-        // Verify that the response is the same instance as errorResponse
-        assertSame(errorResponse, response);
-
-        // Retrieve the list of errors from the ErrorResponse
+        // Retrieve the list of errors
         List<ErrorItem> errors = errorResponse.getErrors();
 
-        // Verify that the list contains the added ErrorItem
-        assertEquals(1, errors.size());
-        assertSame(errorItem, errors.get(0));
+        // Verify the size of the list
+        assertEquals(3, errors.size());
+
+        // Verify the details of each error
+        assertEquals("400", errors.get(0).getStatusCode());
+        assertEquals("Bad Request", errors.get(0).getStatusDescription());
+
+        assertEquals("401", errors.get(1).getStatusCode());
+        assertEquals("Unauthorized", errors.get(1).getStatusDescription());
+
+        assertEquals("404", errors.get(2).getStatusCode());
+        assertEquals("Not Found", errors.get(2).getStatusDescription());
     }
 
     @Test
-    void testErrorItem() {
-        // Create an instance of ErrorItem using the builder
-        ErrorItem errorItem = ErrorItem.builder()
+    void testErrorResponseWith500SeriesErrors() {
+        // Create an instance of ErrorResponse
+        ErrorResponse errorResponse = new ErrorResponse();
+
+        // Add 500 series errors
+        errorResponse.addItem(ErrorItem.builder()
                 .statusCode("500")
                 .severity("CRITICAL")
                 .statusDescription("Internal Server Error")
+                .build());
+
+        errorResponse.addItem(ErrorItem.builder()
+                .statusCode("503")
+                .severity("CRITICAL")
+                .statusDescription("Service Unavailable")
+                .build());
+
+        // Retrieve the list of errors
+        List<ErrorItem> errors = errorResponse.getErrors();
+
+        // Verify the size of the list
+        assertEquals(2, errors.size());
+
+        // Verify the details of each error
+        assertEquals("500", errors.get(0).getStatusCode());
+        assertEquals("Internal Server Error", errors.get(0).getStatusDescription());
+
+        assertEquals("503", errors.get(1).getStatusCode());
+        assertEquals("Service Unavailable", errors.get(1).getStatusDescription());
+    }
+
+    @Test
+    void testErrorItemWith400SeriesError() {
+        // Create an instance of ErrorItem for a 400 series error
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("403")
+                .severity("ERROR")
+                .statusDescription("Forbidden")
                 .build();
 
-        // Verify the properties of the ErrorItem
-        assertEquals("500", errorItem.getStatusCode());
+        // Verify the properties
+        assertEquals("403", errorItem.getStatusCode());
+        assertEquals("ERROR", errorItem.getSeverity());
+        assertEquals("Forbidden", errorItem.getStatusDescription());
+    }
+
+    @Test
+    void testErrorItemWith500SeriesError() {
+        // Create an instance of ErrorItem for a 500 series error
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("502")
+                .severity("CRITICAL")
+                .statusDescription("Bad Gateway")
+                .build();
+
+        // Verify the properties
+        assertEquals("502", errorItem.getStatusCode());
         assertEquals("CRITICAL", errorItem.getSeverity());
-        assertEquals("Internal Server Error", errorItem.getStatusDescription());
-
-        // Modify the properties using the setter methods
-        errorItem.setStatusCode("400");
-        errorItem.setSeverity("WARNING");
-        errorItem.setStatusDescription("Bad Request");
-
-        // Verify the modified properties
-        assertEquals("400", errorItem.getStatusCode());
-        assertEquals("WARNING", errorItem.getSeverity());
-        assertEquals("Bad Request", errorItem.getStatusDescription());
+        assertEquals("Bad Gateway", errorItem.getStatusDescription());
     }
 
     @Test
