@@ -1,0 +1,135 @@
+==================test======================================
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.when;
+
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceRequestDTO;
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceResponseDTO;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.core.publisher.Mono;
+
+class AggregatorEmployerAssociationClientTest {
+
+    @Mock private WebClient employerAssociationWebClient;
+
+    @Mock private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock private WebClient.RequestBodySpec requestBodySpec;
+
+    @Mock private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks private AggregatorEmployerAssociationClient client;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testSearchEmployerDetails_Success() {
+        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+        EmployerServiceResponseDTO responseDTO = new EmployerServiceResponseDTO();
+
+        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(EmployerServiceResponseDTO.class))
+                .thenReturn(Mono.just(responseDTO));
+
+        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
+
+        assertNotNull(result);
+        assertEquals(responseDTO, result.block());
+    }
+}
+
+===============================main=============================
+package com.optum.ftps.ob.core.employer.details.resolver;
+
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceRequestDTO;
+import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceResponseDTO;
+import com.optum.ftps.ob.core.employer.details.exceptions.ClientException;
+import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
+import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Slf4j
+@Component
+public class AggregatorEmployerAssociationClient {
+    private static final String EMPLOYER_ID_SEARCH = "/association/search";
+    private final WebClient employerAssociationWebClient;
+
+    public AggregatorEmployerAssociationClient(
+            @Qualifier("employerAssociationWebClient") WebClient employerAssociationWebClient) {
+        this.employerAssociationWebClient = employerAssociationWebClient;
+    }
+
+    public Mono<EmployerServiceResponseDTO> searchEmployerDetails(
+            EmployerServiceRequestDTO requestDTO) {
+        log.info("request", requestDTO);
+        return employerAssociationWebClient
+                .post()
+                .uri(EMPLOYER_ID_SEARCH)
+                .body(BodyInserters.fromValue(requestDTO))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, this::handle4xxError)
+                .onStatus(HttpStatusCode::is5xxServerError, this::handle5xxError)
+                .bodyToMono(EmployerServiceResponseDTO.class)
+                .onErrorResume(
+                        WebClientResponseException.NotFound.class,
+                        e -> {
+                            log.error("404 Not Found: {}", e.getMessage());
+                            return Mono.empty();
+                        });
+    }
+
+    private Mono<Throwable> handle4xxError(ClientResponse clientResponse) {
+        ErrorItem errorItem =
+                ErrorItem.builder()
+                        .statusCode(clientResponse.statusCode().toString().split(" ")[0])
+                        .severity("ERR")
+                        .statusDescription(clientResponse.statusCode().toString().split(" ")[1])
+                        .build();
+        log.error("4xx Client Error: {}", clientResponse.statusCode());
+        return Mono.error(new ClientException(List.of(errorItem)));
+    }
+
+    private Mono<Throwable> handle5xxError(ClientResponse clientResponse) {
+        ErrorItem errorItem =
+                ErrorItem.builder()
+                        .statusCode(clientResponse.statusCode().toString().split(" ")[0])
+                        .severity("ERR")
+                        .statusDescription(clientResponse.statusCode().toString().split(" ")[1])
+                        .build();
+        log.error("5xx Client Error: {}", clientResponse.statusCode());
+        return Mono.error(new ServiceException(List.of(errorItem)));
+    }
+}
