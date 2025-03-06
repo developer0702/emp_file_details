@@ -1,0 +1,102 @@
+package com.optum.ftps.ob.core.employer.details.config;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.*;
+
+class WebClientConfigTest {
+
+    @Mock
+    private WebClient.Builder webClientBuilder;
+
+    @Mock
+    private WebClient webClient;
+
+    private WebClientConfig webClientConfig;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        webClientConfig = new WebClientConfig("http://aggregate-employer-url", "http://corebanking-employer-url");
+    }
+
+    @Test
+    void testCreateWebClient() {
+        // Arrange
+        String url = "http://test-url";
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(webClient);
+
+        // Act
+        WebClient result = webClientConfig.createWebClient(webClientBuilder, url);
+
+        // Assert
+        assertNotNull(result);
+        verify(webClientBuilder).baseUrl(url);
+        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
+        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
+        verify(webClientBuilder).clientConnector(any());
+        verify(webClientBuilder).build();
+    }
+
+    @Test
+    void testEmployerAssociationWebClient() {
+        // Arrange
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(webClient);
+
+        // Act
+        WebClient result = webClientConfig.employerAssociationWebClient(webClientBuilder);
+
+        // Assert
+        assertNotNull(result);
+        verify(webClientBuilder).baseUrl("http://aggregate-employer-url");
+        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
+        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
+        verify(webClientBuilder).clientConnector(any());
+        verify(webClientBuilder).build();
+    }
+
+    @Test
+    void testEmployerWebClient() {
+        // Arrange
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(webClient);
+
+        // Act
+        WebClient result = webClientConfig.employerWebClient(webClientBuilder);
+
+        // Assert
+        assertNotNull(result);
+        verify(webClientBuilder).baseUrl("http://corebanking-employer-url");
+        verify(webClientBuilder).defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        verify(webClientBuilder).defaultHeader(HttpHeaders.AUTHORIZATION, "");
+        verify(webClientBuilder).defaultHeader("X-Upstream-ENV", "dev");
+        verify(webClientBuilder).clientConnector(any());
+        verify(webClientBuilder).build();
+    }
+
+    @Test
+    void testEmployerDetailsResponseDTO() {
+        // Act
+        EmployerDetailsResponseDTO result = webClientConfig.employerDetailsResponseDTO();
+
+        // Assert
+        assertNotNull(result);
+    }
+}
