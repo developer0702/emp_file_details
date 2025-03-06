@@ -1,0 +1,128 @@
+package com.optum.ftps.ob.core.employer.details.config;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+
+class WebClientConfigTest {
+
+    @InjectMocks private WebClientConfig webClientConfig;
+
+    @Mock private WebClient.Builder webClientBuilder;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testCreateWebClient() {
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(mock(WebClient.class));
+
+        WebClient webClient = webClientConfig.createWebClient(webClientBuilder, "http://localhost");
+        assertNotNull(webClient);
+    }
+
+    @Test
+    void testEmployerAssociationWebClient() {
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(mock(WebClient.class));
+
+        WebClient webClient = webClientConfig.employerAssociationWebClient(webClientBuilder);
+        assertNotNull(webClient);
+    }
+
+    @Test
+    void testEmployerWebClient() {
+        when(webClientBuilder.baseUrl(anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.defaultHeader(anyString(), anyString())).thenReturn(webClientBuilder);
+        when(webClientBuilder.clientConnector(any())).thenReturn(webClientBuilder);
+        when(webClientBuilder.build()).thenReturn(mock(WebClient.class));
+
+        WebClient webClient = webClientConfig.employerWebClient(webClientBuilder);
+        assertNotNull(webClient);
+    }
+
+    @Test
+    void testEmployerDetailsResponseDTO() {
+        assertNotNull(webClientConfig.employerDetailsResponseDTO());
+    }
+}
+==============================main===========================
+
+package com.optum.ftps.ob.core.employer.details.config;
+
+import com.optum.ftps.ob.core.employer.details.dto.EmployerDetailsResponseDTO;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.netty.http.client.HttpClient;
+
+@Slf4j
+@Configuration
+public class WebClientConfig {
+
+    private final String coreBankingEmployerUrl;
+
+    private final String aggregateEmployerAssociationUrl;
+
+    public WebClientConfig(
+            @Value("${aggregate.employer.association.url}") String aggregateEmployerAssociationUrl,
+            @Value("${corebanking.employer.url}") String coreBankingEmployerUrl) {
+        this.aggregateEmployerAssociationUrl = aggregateEmployerAssociationUrl;
+        this.coreBankingEmployerUrl = coreBankingEmployerUrl;
+    }
+
+    /**
+     * Generic method to create WebClient instances with a given base URL.
+     */
+    WebClient createWebClient(WebClient.Builder builder, String url) {
+        String authToken = "";
+        return builder.baseUrl(url)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, authToken)
+                .defaultHeader("X-Upstream-ENV", "dev")
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create()))
+                .build();
+    }
+
+    /**
+     * WebClient for Employer Service (used in AggregatoreEmployerAssociationServiceClient and other employer-bank-related calls).
+     */
+    @Bean("employerAssociationWebClient")
+    public WebClient employerAssociationWebClient(WebClient.Builder builder) {
+        return createWebClient(builder, aggregateEmployerAssociationUrl);
+    }
+
+    @Bean
+    public EmployerDetailsResponseDTO employerDetailsResponseDTO() {
+        return new EmployerDetailsResponseDTO();
+    }
+
+    @Bean("employerWebClient")
+    public WebClient employerWebClient(WebClient.Builder builder) {
+        return createWebClient(builder, coreBankingEmployerUrl);
+    }
+}
