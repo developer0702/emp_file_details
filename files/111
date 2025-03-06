@@ -1,18 +1,171 @@
-package com.optum.ftps.ob.core.employer.details.dto;
+package com.optum.ftps.ob.core.employer.details.exceptions.model;
 
-import lombok.Builder;
-import lombok.Data;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-@Builder
-@Data
-public class StatusMessageType {
-    private final String statusCode;
-    private final String severity;
-    private final String statusDescription;
+import java.util.List;
 
-    public StatusMessageType(String statusCode, String severity, String statusDescription) {
-        this.statusCode = statusCode;
-        this.severity = severity;
-        this.statusDescription = statusDescription;
+class ErrorResponseTest {
+
+    @Test
+    void testErrorResponseWith400SeriesErrors() {
+        // Create an instance of ErrorResponse
+        ErrorResponse errorResponse = new ErrorResponse();
+
+        // Create ErrorItem instances using the builder
+        ErrorItem badRequestError = ErrorItem.builder()
+                .statusCode("400")
+                .severity("ERROR")
+                .statusDescription("Bad Request")
+                .build();
+
+        ErrorItem unauthorizedError = ErrorItem.builder()
+                .statusCode("401")
+                .severity("ERROR")
+                .statusDescription("Unauthorized")
+                .build();
+
+        ErrorItem notFoundError = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        // Add ErrorItem instances to ErrorResponse
+        errorResponse.addItem(badRequestError);
+        errorResponse.addItem(unauthorizedError);
+        errorResponse.addItem(notFoundError);
+
+        // Retrieve the list of errors
+        List<ErrorItem> errors = errorResponse.getErrors();
+
+        // Verify the size of the list
+        assertEquals(3, errors.size());
+
+        // Verify the details of each error
+        assertEquals("400", errors.get(0).getStatusCode());
+        assertEquals("Bad Request", errors.get(0).getStatusDescription());
+
+        assertEquals("401", errors.get(1).getStatusCode());
+        assertEquals("Unauthorized", errors.get(1).getStatusDescription());
+
+        assertEquals("404", errors.get(2).getStatusCode());
+        assertEquals("Not Found", errors.get(2).getStatusDescription());
+    }
+
+    @Test
+    void testErrorResponseWith500SeriesErrors() {
+        // Create an instance of ErrorResponse
+        ErrorResponse errorResponse = new ErrorResponse();
+
+        // Create ErrorItem instances using the builder
+        ErrorItem internalServerError = ErrorItem.builder()
+                .statusCode("500")
+                .severity("CRITICAL")
+                .statusDescription("Internal Server Error")
+                .build();
+
+        ErrorItem serviceUnavailableError = ErrorItem.builder()
+                .statusCode("503")
+                .severity("CRITICAL")
+                .statusDescription("Service Unavailable")
+                .build();
+
+        // Add ErrorItem instances to ErrorResponse
+        errorResponse.addItem(internalServerError);
+        errorResponse.addItem(serviceUnavailableError);
+
+        // Retrieve the list of errors
+        List<ErrorItem> errors = errorResponse.getErrors();
+
+        // Verify the size of the list
+        assertEquals(2, errors.size());
+
+        // Verify the details of each error
+        assertEquals("500", errors.get(0).getStatusCode());
+        assertEquals("Internal Server Error", errors.get(0).getStatusDescription());
+
+        assertEquals("503", errors.get(1).getStatusCode());
+        assertEquals("Service Unavailable", errors.get(1).getStatusDescription());
+    }
+
+    @Test
+    void testErrorItemWith400SeriesError() {
+        // Create an instance of ErrorItem for a 400 series error
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("403")
+                .severity("ERROR")
+                .statusDescription("Forbidden")
+                .build();
+
+        // Verify the properties
+        assertEquals("403", errorItem.getStatusCode());
+        assertEquals("ERROR", errorItem.getSeverity());
+        assertEquals("Forbidden", errorItem.getStatusDescription());
+    }
+
+    @Test
+    void testErrorItemWith500SeriesError() {
+        // Create an instance of ErrorItem for a 500 series error
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("502")
+                .severity("CRITICAL")
+                .statusDescription("Bad Gateway")
+                .build();
+
+        // Verify the properties
+        assertEquals("502", errorItem.getStatusCode());
+        assertEquals("CRITICAL", errorItem.getSeverity());
+        assertEquals("Bad Gateway", errorItem.getStatusDescription());
+    }
+
+    @Test
+    void testErrorResponseToStringAndEqualsAndHashCode() {
+        // Create an instance of ErrorItem
+        ErrorItem errorItem = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        // Create two instances of ErrorResponse with the same ErrorItem
+        ErrorResponse errorResponse1 = new ErrorResponse().addItem(errorItem);
+        ErrorResponse errorResponse2 = new ErrorResponse().addItem(errorItem);
+
+        // Verify toString method
+        assertNotNull(errorResponse1.toString());
+        assertNotNull(errorResponse2.toString());
+
+        // Verify equals method
+        assertEquals(errorResponse1, errorResponse2);
+
+        // Verify hashCode method
+        assertEquals(errorResponse1.hashCode(), errorResponse2.hashCode());
+    }
+
+    @Test
+    void testErrorItemToStringAndEqualsAndHashCode() {
+        // Create two instances of ErrorItem with the same properties
+        ErrorItem errorItem1 = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        ErrorItem errorItem2 = ErrorItem.builder()
+                .statusCode("404")
+                .severity("ERROR")
+                .statusDescription("Not Found")
+                .build();
+
+        // Verify toString method
+        assertNotNull(errorItem1.toString());
+        assertNotNull(errorItem2.toString());
+
+        // Verify equals method
+        assertEquals(errorItem1, errorItem2);
+
+        // Verify hashCode method
+        assertEquals(errorItem1.hashCode(), errorItem2.hashCode());
     }
 }
