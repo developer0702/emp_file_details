@@ -1,3 +1,6 @@
+ ErrorResponse errorResponse = ErrorResponse.builder().build();
+        errorResponse.addItem(errorItem);
+
 package com.optum.ftps.ob.core.employer.details.exceptions.model;
 
 import org.junit.jupiter.api.Test;
