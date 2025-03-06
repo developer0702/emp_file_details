@@ -1,5 +1,5 @@
 @Test
-void testAddBankAccountResponse_NotFound() {
+void testAddBankAccountResponse_Exception() {
     // Arrange
     BankAccountDTO bankAccountInput = new BankAccountDTO();
 
@@ -8,16 +8,94 @@ void testAddBankAccountResponse_NotFound() {
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
-            .thenReturn(Mono.error(new ClientException(
-                    List.of(
-                            ErrorItem.builder()
-                                    .statusCode("404")
-                                    .statusDescription("Not Found")
-                                    .severity("ERR")
-                                    .build()))));
+            .thenReturn(Mono.error(new RuntimeException("Unexpected error")));
 
     // Act & Assert
-    assertThrows(ClientException.class, () -> {
+    assertThrows(RuntimeException.class, () -> {
         bankAccountHelper.addBankAccountResponse(bankAccountInput, "123");
+    });
+}
+
+@Test
+void testCallAddBankAccountApi_NotFound() {
+    // Arrange
+    BankAccountDTO bankAccountInput = new BankAccountDTO();
+
+    when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.bodyValue(any(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+            .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", null, null, null, null)));
+
+    // Act & Assert
+    StepVerifier.create(bankAccountHelper.callAddBankAccountApi(bankAccountInput, "123"))
+            .expectComplete()
+            .verify();
+}
+
+
+@Test
+void testHandle4xxError_BadRequest() {
+    // Arrange
+    when(clientResponse.statusCode()).thenReturn(HttpStatusCode.valueOf(400));
+
+    // Act
+    Mono<Throwable> result = bankAccountHelper.handle4xxError(clientResponse);
+
+    // Assert
+    StepVerifier.create(result)
+            .expectErrorMatches(throwable -> throwable instanceof ClientException &&
+                    ((ClientException) throwable).getErrors().get(0).getStatusCode().equals("400"))
+            .verify();
+}
+
+
+@Test
+void testHandle5xxError_InternalServerError() {
+    // Arrange
+    when(clientResponse.statusCode()).thenReturn(HttpStatusCode.valueOf(500));
+
+    // Act
+    Mono<Throwable> result = bankAccountHelper.handle5xxError(clientResponse);
+
+    // Assert
+    StepVerifier.create(result)
+            .expectErrorMatches(throwable -> throwable instanceof ServiceException &&
+                    ((ServiceException) throwable).getErrors().get(0).getStatusCode().equals("500"))
+            .verify();
+}
+
+@Test
+void testCallUpdateBankAccountApi_NotFound() {
+    // Arrange
+    BankAccountDTO bankAccountInput = new BankAccountDTO();
+
+    when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.body(any(Mono.class), eq(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+            .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", null, null, null, null)));
+
+    // Act & Assert
+    StepVerifier.create(bankAccountHelper.callUpdateBankAccountApi(bankAccountInput, "123", 1L))
+            .expectComplete()
+            .verify();
+}
+
+@Test
+void testAddBankAccountResponse_NullInput() {
+    // Arrange
+    when(requestBodyUriSpec.uri(any(Function.class))).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.bodyValue(any(BankAccountDTO.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(BankAccountResponseDTO.class))
+            .thenReturn(Mono.error(new NullPointerException("Input is null")));
+
+    // Act & Assert
+    assertThrows(NullPointerException.class, () -> {
+        bankAccountHelper.addBankAccountResponse(null, "123");
     });
 }
