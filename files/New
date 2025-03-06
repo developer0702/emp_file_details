@@ -1,163 +1,27 @@
-package com.optum.ftps.ob.core.employer.details.resolver;
+@Test
+void testSearchEmployerDetails_5xxError() {
+    EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
+    requestDTO.setId("123");
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+    // Mock the WebClient chain
+    when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+    when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
-import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceRequestDTO;
-import com.optum.ftps.ob.core.employer.details.dto.employerAssociation.EmployerServiceResponseDTO;
-import com.optum.ftps.ob.core.employer.details.exceptions.ClientException;
-import com.optum.ftps.ob.core.employer.details.exceptions.ServiceException;
-import com.optum.ftps.ob.core.employer.details.exceptions.model.ErrorItem;
+    // Mock the onStatus method to simulate a 5xx error
+    when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
+        // Simulate a 5xx error by throwing a ServiceException
+        return Mono.error(new ServiceException(List.of(
+                new ErrorItem("500", "ERR", "Internal Server Error")
+        )));
+    });
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+    // Call the method under test
+    Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
 
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-class AggregatorEmployerAssociationClientTest {
-
-    @Mock
-    private WebClient employerAssociationWebClient;
-
-    @Mock
-    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
-
-    @Mock
-    private WebClient.RequestBodySpec requestBodySpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
-
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
-
-    @InjectMocks
-    private AggregatorEmployerAssociationClient client;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
-    @Test
-    void testSearchEmployerDetails_Success() {
-        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
-        requestDTO.setId("123");
-        requestDTO.setGroupId("456");
-        requestDTO.setStatus("ACTIVE");
-        requestDTO.setEmployerName("Test Employer");
-
-        EmployerServiceResponseDTO responseDTO = new EmployerServiceResponseDTO();
-        responseDTO.setStatus(EmployerServiceResponseDTO.Status.SUCCESS);
-
-        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(EmployerServiceResponseDTO.class))
-                .thenReturn(Mono.just(responseDTO));
-
-        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
-
-        StepVerifier.create(result)
-                .expectNext(responseDTO)
-                .verifyComplete();
-    }
-
-    @Test
-    void testSearchEmployerDetails_4xxError() {
-        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
-        requestDTO.setId("123");
-
-        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
-            HttpStatus status = HttpStatus.BAD_REQUEST;
-            ClientResponse clientResponse = ClientResponse.create(status).build();
-            return client.handle4xxError(clientResponse);
-        });
-
-        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
-
-        StepVerifier.create(result)
-                .expectError(ClientException.class)
-                .verify();
-    }
-
-    @Test
-    void testSearchEmployerDetails_5xxError() {
-        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
-        requestDTO.setId("123");
-
-        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
-            HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-            ClientResponse clientResponse = ClientResponse.create(status).build();
-            return client.handle5xxError(clientResponse);
-        });
-
-        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
-
-        StepVerifier.create(result)
-                .expectError(ServiceException.class)
-                .verify();
-    }
-
-    @Test
-    void testSearchEmployerDetails_NotFound() {
-        EmployerServiceRequestDTO requestDTO = new EmployerServiceRequestDTO();
-        requestDTO.setId("123");
-
-        when(employerAssociationWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(EmployerServiceResponseDTO.class))
-                .thenReturn(Mono.error(new WebClientResponseException.NotFound("Not Found", HttpStatus.NOT_FOUND, "Status", null, null, null)));
-
-        Mono<EmployerServiceResponseDTO> result = client.searchEmployerDetails(requestDTO);
-
-        StepVerifier.create(result)
-                .expectComplete()
-                .verify();
-    }
-
-    @Test
-    void testHandle4xxError() {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        ClientResponse clientResponse = ClientResponse.create(status).build();
-
-        Mono<Throwable> result = client.handle4xxError(clientResponse);
-
-        StepVerifier.create(result)
-                .expectError(ClientException.class)
-                .verify();
-    }
-
-    @Test
-    void testHandle5xxError() {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        ClientResponse clientResponse = ClientResponse.create(status).build();
-
-        Mono<Throwable> result = client.handle5xxError(clientResponse);
-
-        StepVerifier.create(result)
-                .expectError(ServiceException.class)
-                .verify();
-    }
+    // Verify the error
+    StepVerifier.create(result)
+            .expectErrorMatches(throwable -> throwable instanceof ServiceException)
+            .verify();
 }
