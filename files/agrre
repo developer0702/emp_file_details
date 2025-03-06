@@ -1,3 +1,37 @@
+package com.optum.ftps.ob.core.employer.details.dto.employerAssociation;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import lombok.Data;
+
+import java.util.List;
+
+@Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class EmployerServiceResponseDTO {
+    private List<DataDTO> data;
+    private Status status;
+    private List<ErrorDTO> errors;
+
+    public enum Status {
+        SUCCESS,
+        FAILURE
+    }
+}
+
+===============request=========================
+package com.optum.ftps.ob.core.employer.details.dto.employerAssociation;
+
+import lombok.Data;
+
+@Data
+public class EmployerServiceRequestDTO {
+    private String id;
+    private String groupId;
+    private String status;
+    private String employerName;
+}
+
 ==================test======================================
 package com.optum.ftps.ob.core.employer.details.resolver;
 
