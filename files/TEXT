@@ -1,1 +1,2 @@
+Okay, I will make the changes to the DTOs that I am using for the update employer bank details APIs.
 Using a record instead of a class would impact the existing API, so it's not feasible at the moment.
