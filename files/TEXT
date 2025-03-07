@@ -1,0 +1,1 @@
+Using a record instead of a class would impact the existing API, so it's not feasible at the moment.
